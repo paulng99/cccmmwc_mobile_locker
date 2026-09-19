@@ -66,6 +66,11 @@
   "todayOnce": "當天只開1次",
   "yes": "是",
   "exportMapping": "學生與箱門關係",
-  "exportMappingHint": "撳「導入 Excel」下載學生與箱門對照表，即可知每格手機櫃對應邊位學生。檔案有「箱門」與「學生」兩張工作表。",
-  "exportExcel": "導入 Excel"
+  "exportMappingHint": "喺智能柜「用戶管理」撳「导出Excel」，再喺呢度導入。亦可自動下載後導入。",
+  "exportExcel": "導入 Excel",
+  "importing": "導入中…",
+  "openFrpUser": "開啟智能柜（用戶管理）",
+  "assignedLocker": "授權箱門",
+  "importFrpOk": "已導入 {count} 筆學生與箱門關係。",
+  "importFrpFail": "未能導入。請用智能柜用戶管理「导出Excel」嘅檔案。"
 }

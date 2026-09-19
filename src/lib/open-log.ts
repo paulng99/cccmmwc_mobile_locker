@@ -294,8 +294,9 @@ export function parseFrpUserRow(
   if (lockerRaw && !locker) return { error: "invalid_locker" };
 
   const place = parseSchoolPlace(studentNo, values.classCode ?? "");
+  const name = emptyToNull(values.studentName ?? "");
   return {
-    studentName: emptyToNull(values.studentName ?? ""),
+    studentName: name && name !== studentNo ? name : null,
     studentNo,
     classCode: place.classGroup || (values.classCode ?? "").trim(),
     lockerRaw,

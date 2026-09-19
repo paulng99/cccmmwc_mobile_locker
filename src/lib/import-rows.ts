@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { formatHkDate, type OpenLogRow, rowFingerprint } from "./open-log";
+import { formatHkDate, type FrpUserRow, type OpenLogRow, rowFingerprint } from "./open-log";
 
 export async function importOpenLogRows(rows: OpenLogRow[], source: string) {
   let inserted = 0;
@@ -58,6 +58,75 @@ export async function importOpenLogRows(rows: OpenLogRow[], source: string) {
   });
 
   return { inserted, total: rows.length };
+}
+
+export async function importLockerAssignments(rows: FrpUserRow[]) {
+  const unique = new Map<string, FrpUserRow>();
+  for (const row of rows) {
+    unique.set(row.studentNo.toUpperCase(), row);
+  }
+  const data = [...unique.values()].map((row) => ({
+    studentNo: row.studentNo,
+    studentName: row.studentName,
+    classCode: row.classCode,
+    lockerCode: row.lockerCode,
+    cabinet: row.cabinet,
+    doorNo: row.doorNo,
+  }));
+
+  await prisma.$executeRaw`DELETE FROM locker_assignments`;
+  for (const row of data) {
+    await prisma.$executeRaw`
+      INSERT INTO locker_assignments (student_no, student_name, class_code, locker_code, cabinet, door_no)
+      VALUES (${row.studentNo}, ${row.studentName}, ${row.classCode}, ${row.lockerCode}, ${row.cabinet}, ${row.doorNo})
+    `;
+  }
+
+  return { imported: data.length, total: rows.length };
+}
+
+export type LockerAssignmentRow = {
+  studentNo: string;
+  studentName: string | null;
+  classCode: string;
+  lockerCode: string;
+  cabinet: string;
+  doorNo: string;
+};
+
+export async function listLockerAssignments(cabinet?: string): Promise<LockerAssignmentRow[]> {
+  const rows = cabinet
+    ? await prisma.$queryRaw<Array<{
+        student_no: string;
+        student_name: string | null;
+        class_code: string;
+        locker_code: string;
+        cabinet: string;
+        door_no: string;
+      }>>`
+        SELECT student_no, student_name, class_code, locker_code, cabinet, door_no
+        FROM locker_assignments
+        WHERE cabinet = ${cabinet}
+      `
+    : await prisma.$queryRaw<Array<{
+        student_no: string;
+        student_name: string | null;
+        class_code: string;
+        locker_code: string;
+        cabinet: string;
+        door_no: string;
+      }>>`
+        SELECT student_no, student_name, class_code, locker_code, cabinet, door_no
+        FROM locker_assignments
+      `;
+  return rows.map((row) => ({
+    studentNo: row.student_no,
+    studentName: row.student_name,
+    classCode: row.class_code,
+    lockerCode: row.locker_code,
+    cabinet: row.cabinet,
+    doorNo: row.door_no,
+  }));
 }
 
 export async function recomputeCurrentState() {

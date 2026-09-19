@@ -11,13 +11,14 @@ type Row = {
   classCode: string;
   studentName: string | null;
   lastLockerCode: string;
+  assignedLockerCode: string;
   lastOpenedAt: string | null;
   unused: boolean;
   todayOpenCount: number;
 };
 
 type Placed = Row & ReturnType<typeof parseSchoolPlace>;
-type SortKey = "form" | "class" | "studentNo" | "studentName" | "lastLocker" | "lastUsed" | "unused" | "todayOnce";
+type SortKey = "form" | "class" | "studentNo" | "studentName" | "assignedLocker" | "lastLocker" | "lastUsed" | "unused" | "todayOnce";
 
 export function StudentTable() {
   const t = useTranslations();
@@ -73,6 +74,8 @@ export function StudentTable() {
             return row.classNo || row.studentNo;
           case "studentName":
             return row.studentName ?? "";
+          case "assignedLocker":
+            return row.assignedLockerCode;
           case "lastLocker":
             return row.lastLockerCode;
           case "lastUsed":
@@ -185,6 +188,7 @@ export function StudentTable() {
                   {head("class", t("class"))}
                   {head("studentNo", t("studentNo"))}
                   {head("studentName", t("studentName"))}
+                  {head("assignedLocker", t("assignedLocker"))}
                   {head("lastLocker", t("lastLocker"))}
                   {head("lastUsed", t("lastUsed"))}
                   {head("unused", t("unused"))}
@@ -202,6 +206,7 @@ export function StudentTable() {
                     <td>{row.classGroup || row.classCode || "—"}</td>
                     <td>{row.classNo ? String(row.classNo).padStart(2, "0") : row.studentNo}</td>
                     <td>{row.studentName ?? ""}</td>
+                    <td>{row.assignedLockerCode || t("vacant")}</td>
                     <td>{row.lastLockerCode || t("vacant")}</td>
                     <td>{row.lastOpenedAt ?? t("vacant")}</td>
                     <td className="mark">{row.unused ? <YesIcon label={t("yes")} /> : ""}</td>

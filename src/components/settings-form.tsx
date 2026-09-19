@@ -1,7 +1,8 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRef, useState } from "react";
+import { fetchFrpUserExcelFromIntranet, probeIntranet } from "@/lib/intranet";
 
 type Settings = {
   intranetBaseUrl: string;
@@ -15,9 +16,12 @@ type Settings = {
 
 export function SettingsForm({ initial }: { initial: Settings }) {
   const t = useTranslations();
-  const locale = useLocale();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(initial);
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -28,6 +32,79 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     });
     if (response.ok) setSaved(true);
   }
+
+  function failMessage(code?: string) {
+    if (code === "missing_session") return t("missingSession");
+    if (code === "need_locker_login") return t("needLockerLogin");
+    return t("importFrpFail");
+  }
+
+  async function importWorkbook(file: Blob, filename: string) {
+    const body = new FormData();
+    body.append("file", file, filename);
+    const imported = await fetch("/api/import/frp-users", { method: "POST", body });
+    const result = (await imported.json()) as { ok?: boolean; imported?: number; error?: string };
+    if (!imported.ok) throw new Error(result.error ?? "import_failed");
+    setMessage(t("importFrpOk", { count: result.imported ?? 0 }));
+    setError(null);
+  }
+
+  async function importFromIntranet() {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    const reachable = await probeIntranet(form.intranetBaseUrl);
+    if (reachable) {
+      try {
+        const excel = await fetchFrpUserExcelFromIntranet({
+          baseUrl: form.intranetBaseUrl,
+          sessionInput: form.sessionPayload,
+        });
+        await importWorkbook(
+          new Blob([excel], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+          "frp-user.xlsx",
+        );
+        setBusy(false);
+        return;
+      } catch {
+        setMessage(t("corsFail"));
+      }
+    }
+    try {
+      const proxy = await fetch("/api/sync/frp-users", { method: "POST" });
+      const result = (await proxy.json()) as { ok?: boolean; imported?: number; error?: string };
+      if (!proxy.ok) {
+        setError(failMessage(result.error));
+        setMessage(null);
+      } else {
+        setMessage(t("importFrpOk", { count: result.imported ?? 0 }));
+        setError(null);
+      }
+    } catch {
+      setError(reachable ? t("importFrpFail") : t("intranetFail"));
+      setMessage(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      await importWorkbook(file, file.name);
+    } catch {
+      setError(t("importFrpFail"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const lockerUsersUrl = `${form.intranetBaseUrl.replace(/\/$/, "")}/#/Users/FRPUser`;
 
   return (
     <>
@@ -82,12 +159,29 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     </form>
     <section className="card">
       <h2>{t("exportMapping")}</h2>
-      <p className="hint">{t("exportMappingHint")}</p>
-      <div className="sync-row">
-        <a className="primary" href={`/api/export/student-lockers?locale=${locale}`}>
-          {t("exportExcel")}
+      <p className="hint">
+        {t("exportMappingHint")}{" "}
+        <a href={lockerUsersUrl} target="_blank" rel="noreferrer">
+          {t("openFrpUser")}
         </a>
+      </p>
+      <div className="sync-row">
+        <button className="primary" type="button" onClick={importFromIntranet} disabled={busy}>
+          {busy ? t("importing") : t("exportExcel")}
+        </button>
+        <button className="secondary" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
+          {t("uploadExcel")}
+        </button>
+        <input
+          ref={fileRef}
+          className="file-input"
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          onChange={onUpload}
+        />
       </div>
+      {message ? <p className="okmsg">{message}</p> : null}
+      {error ? <p className="alert">{error}</p> : null}
     </section>
     </>
   );

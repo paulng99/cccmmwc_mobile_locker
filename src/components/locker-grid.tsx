@@ -10,6 +10,7 @@ type Door = {
   lockerCode: string;
   doorNo: string;
   vacant: boolean;
+  assigned: boolean;
   studentName: string | null;
   studentNo: string | null;
   classCode: string | null;
@@ -46,7 +47,7 @@ export function LockerGrid() {
       </div>
       <div className="locker-grid">
         {doors.map((door) => {
-          const tone = doorTone(door.lastOpenedAt, today);
+          const tone = doorTone(door.lastOpenedAt, today, door.assigned);
           return (
             <article key={door.lockerCode} className={`door ${tone}`}>
               <div className="no">{door.doorNo}</div>
@@ -58,7 +59,7 @@ export function LockerGrid() {
                   <div className="door-meta">
                     {door.classCode} {door.studentNo}
                   </div>
-                  <div className="door-meta">{door.lastOpenedAt}</div>
+                  <div className="door-meta">{door.lastOpenedAt ?? t("vacant")}</div>
                 </>
               )}
               <Link

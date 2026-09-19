@@ -1,14 +1,28 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const PRISMA_SCHEMA_ID = "locker_assignments_v1";
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+  prismaSchemaId?: string;
+};
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createPrisma() {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (globalForPrisma.prisma && globalForPrisma.prismaSchemaId !== PRISMA_SCHEMA_ID) {
+  void globalForPrisma.prisma.$disconnect();
+  globalForPrisma.prisma = undefined;
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrisma();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaSchemaId = PRISMA_SCHEMA_ID;
+}
 
 export async function readUnusedStudentNos(): Promise<string> {
   const rows = await prisma.$queryRaw<Array<{ unused_student_nos: string }>>`

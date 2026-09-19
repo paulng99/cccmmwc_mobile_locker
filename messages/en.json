@@ -66,6 +66,11 @@
   "todayOnce": "Opened once today",
   "yes": "Yes",
   "exportMapping": "Student–locker mapping",
-  "exportMappingHint": "Click Import Excel to download the student–locker mapping. The file has Lockers and Students sheets.",
-  "exportExcel": "Import Excel"
+  "exportMappingHint": "On 智能柜, open Users, click 导出Excel, then import the file here. Automatic download is also available.",
+  "exportExcel": "Import Excel",
+  "importing": "Importing…",
+  "openFrpUser": "Open 智能柜 (用户管理)",
+  "assignedLocker": "Assigned locker",
+  "importFrpOk": "Imported {count} student–locker rows.",
+  "importFrpFail": "Could not import. Use the Excel from 智能柜 → 用户管理 → 导出Excel."
 }

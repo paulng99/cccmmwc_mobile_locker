@@ -93,3 +93,16 @@ model LockerCurrent {
   @@index([cabinet, doorNo])
   @@map("locker_current")
 }
+
+model LockerAssignment {
+  studentNo   String   @id @map("student_no")
+  studentName String?  @map("student_name")
+  classCode   String   @default("") @map("class_code")
+  lockerCode  String   @default("") @map("locker_code")
+  cabinet     String   @default("")
+  doorNo      String   @default("") @map("door_no")
+  importedAt  DateTime @default(now()) @map("imported_at")
+
+  @@index([lockerCode])
+  @@map("locker_assignments")
+}

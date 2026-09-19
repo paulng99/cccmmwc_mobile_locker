@@ -71,11 +71,16 @@ export function exportQuery(from: string, to: string): string {
 }
 
 export function candidateExportUrls(baseUrl: string, exportApiPath: string, _from?: string, _to?: string): string[] {
+  return absoluteExportUrls(baseUrl, [exportApiPath, "/Logs/OpenLog/ExportExcel"]);
+}
+
+export function candidateFrpUserExportUrls(baseUrl: string): string[] {
+  return absoluteExportUrls(baseUrl, ["/Users/FRPUser/ExportExcel"]);
+}
+
+function absoluteExportUrls(baseUrl: string, paths: string[]): string[] {
   const base = baseUrl.replace(/\/$/, "");
-  const paths = [exportApiPath, "/Logs/OpenLog/ExportExcel"]
-    .map((path) => path.trim())
-    .filter(Boolean);
-  const unique = [...new Set(paths)];
+  const unique = [...new Set(paths.map((path) => path.trim()).filter(Boolean))];
   return unique.map((path) => {
     const prefix = path.startsWith("http") ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
     return prefix.includes("?") ? prefix : `${prefix}?1=1`;
@@ -119,8 +124,21 @@ export async function fetchExcelFromIntranet(options: {
   from: string;
   to: string;
 }): Promise<ArrayBuffer> {
-  const auth = parseAuthInput(options.sessionInput);
-  const urls = candidateExportUrls(options.baseUrl, options.exportApiPath, options.from, options.to);
+  return fetchExcelFromUrls(
+    candidateExportUrls(options.baseUrl, options.exportApiPath, options.from, options.to),
+    options.sessionInput,
+  );
+}
+
+export async function fetchFrpUserExcelFromIntranet(options: {
+  baseUrl: string;
+  sessionInput: string;
+}): Promise<ArrayBuffer> {
+  return fetchExcelFromUrls(candidateFrpUserExportUrls(options.baseUrl), options.sessionInput);
+}
+
+async function fetchExcelFromUrls(urls: string[], sessionInput: string): Promise<ArrayBuffer> {
+  const auth = parseAuthInput(sessionInput);
   let lastError: Error | null = null;
   for (const url of urls) {
     try {
