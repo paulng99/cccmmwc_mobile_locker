@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  loginName    String   @unique @map("login_name")
+  passwordHash String   @map("password_hash")
+  email        String?
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model AppSettings {
+  id                 Int      @id @default(1)
+  intranetBaseUrl    String   @default("http://10.127.7.200:17789") @map("intranet_base_url")
+  sessionStorageKey  String   @default("__tea_session_id_586864") @map("session_storage_key")
+  sessionPayload     String   @default("") @map("session_payload")
+  exportApiPath      String   @default("") @map("export_api_path")
+  firstImportDate    String   @default("2025-09-01") @map("first_import_date")
+  doorsPerCabinet    Int      @default(120) @map("doors_per_cabinet")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+model SyncState {
+  id                   Int       @id @default(1)
+  lastAttemptAt        DateTime? @map("last_attempt_at")
+  lastSuccessAt        DateTime? @map("last_success_at")
+  lastSuccessOpenDate  String?   @map("last_success_open_date")
+  lastError            String?   @map("last_error")
+  lastRowCount         Int       @default(0) @map("last_row_count")
+
+  @@map("sync_state")
+}
+
+model OpenEvent {
+  id             BigInt   @id @default(autoincrement())
+  openedAt       DateTime @map("opened_at")
+  studentName    String?  @map("student_name")
+  studentNo      String   @map("student_no")
+  classCode      String   @map("class_code")
+  cabinet        String
+  doorNo         String   @map("door_no")
+  lockerCode     String   @map("locker_code")
+  openType       String   @map("open_type")
+  verifyMethod   String   @default("") @map("verify_method")
+  adminName      String   @default("") @map("admin_name")
+  remark         String   @default("")
+  source         String
+  rowFingerprint String   @unique @map("row_fingerprint")
+  rawJson        Json     @map("raw_json")
+  importedAt     DateTime @default(now()) @map("imported_at")
+
+  @@index([studentNo, openedAt(sort: Desc)])
+  @@index([lockerCode, openedAt(sort: Desc)])
+  @@index([openedAt])
+  @@map("open_events")
+}
+
+model StudentCurrent {
+  studentNo      String    @id @map("student_no")
+  classCode      String    @map("class_code")
+  studentName    String?   @map("student_name")
+  lastOpenedAt   DateTime  @map("last_opened_at")
+  lastLockerCode String    @map("last_locker_code")
+  lastOpenType   String    @map("last_open_type")
+  lastEventId    BigInt    @map("last_event_id")
+
+  @@map("student_current")
+}
+
+model LockerCurrent {
+  lockerCode   String    @id @map("locker_code")
+  cabinet      String
+  doorNo       String    @map("door_no")
+  studentNo    String?   @map("student_no")
+  classCode    String?   @map("class_code")
+  studentName  String?   @map("student_name")
+  lastOpenedAt DateTime? @map("last_opened_at")
+  lastOpenType String?   @map("last_open_type")
+  lastEventId  BigInt?   @map("last_event_id")
+
+  @@index([cabinet, doorNo])
+  @@map("locker_current")
+}
