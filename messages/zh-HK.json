@@ -21,8 +21,6 @@
   "cabinet": "{id} 櫃",
   "door": "格號",
   "search": "搜尋班別／學號／姓名",
-  "hideVacant": "隱藏空置",
-  "showVacant": "顯示空置",
   "intranetOk": "已連接學校網絡",
   "intranetFail": "未能連接校內手機櫃系統（10.127.7.200）。請用已連接學校網絡的電腦或手機再按更新。已保存的歷史紀錄仍可查閱。",
   "lastSync": "上次成功更新",
@@ -52,7 +50,8 @@
   "proxyFail": "未能自動下載 Excel。請先登入智能柜，撳「导出Excel」，再喺呢度上傳檔案。",
   "uploadExcel": "上傳 Excel",
   "uploadHint": "自動下載需要智能柜登入 Cookie。你亦可以喺原廠頁導出後喺呢度上傳。",
-  "openLocker": "開啟開箱記錄",
+  "openLocker": "開啟智能柜（記錄管理 → 开箱记录）",
   "uploadFail": "未能匯入呢個 Excel。請用智能柜「导出Excel」嘅檔案。",
-  "language": "語言"
+  "language": "語言",
+  "nowHkt": "yyyy-mm-dd HH:mm:ss HKT"
 }

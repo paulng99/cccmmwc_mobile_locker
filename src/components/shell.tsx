@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/routing";
+import { formatHkDateTime } from "@/lib/open-log";
 
 export function Shell({
   children,
@@ -12,6 +14,15 @@ export function Shell({
 }) {
   const t = useTranslations();
   const pathname = usePathname();
+  const [now, setNow] = useState("");
+
+  useEffect(() => {
+    const tick = () => setNow(formatHkDateTime(new Date()));
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   async function logout() {
     await fetch("/api/logout", { method: "POST" });
     window.location.href = pathname.startsWith("/en") ? "/en/login" : "/zh-HK/login";
@@ -19,7 +30,12 @@ export function Shell({
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">{t("appName")}</div>
+        <div className="brand-block">
+          <div className="brand">{t("appName")}</div>
+          <time className="hk-clock" dateTime={now || undefined}>
+            {now ? `${now} HKT` : t("nowHkt")}
+          </time>
+        </div>
         <nav className="nav">
           <Link href="/" className={pathname === "/" ? "active" : ""}>
             {t("students")}

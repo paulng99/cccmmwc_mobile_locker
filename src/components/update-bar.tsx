@@ -117,8 +117,8 @@ export function UpdateBar() {
   }
 
   const lockerUrl = settings?.intranetBaseUrl
-    ? `${settings.intranetBaseUrl.replace(/\/$/, "")}/Logs/OpenLog`
-    : "http://10.127.7.200:17789/Logs/OpenLog";
+    ? settings.intranetBaseUrl.replace(/\/$/, "")
+    : "http://10.127.7.200:17789";
 
   return (
     <section className="card">

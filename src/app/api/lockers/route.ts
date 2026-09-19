@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { CABINETS, formatHkDateTime } from "@/lib/open-log";
+import { CABINETS, LOCKER_GRID_SIZE, formatHkDateTime } from "@/lib/open-log";
 
 export async function GET(request: Request) {
   const session = await requireUser();
@@ -11,16 +11,12 @@ export async function GET(request: Request) {
   if (!CABINETS.includes(cabinet as (typeof CABINETS)[number])) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  const settings = await prisma.appSettings.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1 },
-  });
   const occupied = await prisma.lockerCurrent.findMany({
     where: { cabinet },
   });
   const byDoor = new Map(occupied.map((row) => [row.doorNo, row]));
-  const doors = Array.from({ length: settings.doorsPerCabinet }, (_, index) => {
+  const doorCount = LOCKER_GRID_SIZE;
+  const doors = Array.from({ length: doorCount }, (_, index) => {
     const doorNo = String(index + 1).padStart(3, "0");
     const current = byDoor.get(doorNo);
     return {

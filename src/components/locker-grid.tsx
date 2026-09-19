@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
-import { CABINETS } from "@/lib/open-log";
+import { CABINETS, doorTone, hkToday } from "@/lib/open-log";
 
 type Door = {
   lockerCode: string;
@@ -18,8 +18,8 @@ type Door = {
 export function LockerGrid() {
   const t = useTranslations();
   const [cabinet, setCabinet] = useState("A");
-  const [hideVacant, setHideVacant] = useState(false);
   const [doors, setDoors] = useState<Door[]>([]);
+  const today = hkToday();
 
   useEffect(() => {
     void (async () => {
@@ -29,40 +29,43 @@ export function LockerGrid() {
     })();
   }, [cabinet]);
 
-  const visible = hideVacant ? doors.filter((door) => !door.vacant) : doors;
-
   return (
-    <section className="card">
+    <section className="card locker-board">
       <div className="cabinets">
         {CABINETS.map((id) => (
-          <button key={id} className={`c${id}`} type="button" onClick={() => setCabinet(id)}>
+          <button
+            key={id}
+            className={`c${id}${cabinet === id ? " active" : ""}`}
+            type="button"
+            onClick={() => setCabinet(id)}
+          >
             {t("cabinet", { id })}
           </button>
         ))}
       </div>
-      <button type="button" className="primary" onClick={() => setHideVacant((value) => !value)}>
-        {hideVacant ? t("showVacant") : t("hideVacant")}
-      </button>
-      <div className="grid" style={{ marginTop: 16 }}>
-        {visible.map((door) => (
-          <article key={door.lockerCode} className={`door ${door.vacant ? "vacant" : ""}`}>
-            <div className="no">{door.doorNo}</div>
-            {door.vacant ? (
-              <div>{t("vacant")}</div>
-            ) : (
-              <>
-                {door.studentName ? <div>{door.studentName}</div> : null}
-                <div>
-                  {door.classCode} {door.studentNo}
-                </div>
-                <div>{door.lastOpenedAt}</div>
-              </>
-            )}
-            <Link className="history" href={`/history?lockerCode=${encodeURIComponent(door.lockerCode)}`}>
-              {t("history")}
-            </Link>
-          </article>
-        ))}
+      <div className="locker-grid">
+        {doors.map((door) => {
+          const tone = doorTone(door.lastOpenedAt, today);
+          return (
+            <article key={door.lockerCode} className={`door ${tone}`}>
+              <div className="no">{door.doorNo}</div>
+              {tone === "vacant" ? (
+                <div className="door-meta">{t("vacant")}</div>
+              ) : (
+                <>
+                  {door.studentName ? <div className="door-name">{door.studentName}</div> : null}
+                  <div className="door-meta">
+                    {door.classCode} {door.studentNo}
+                  </div>
+                  <div className="door-meta">{door.lastOpenedAt}</div>
+                </>
+              )}
+              <Link className="history" href={`/history?lockerCode=${encodeURIComponent(door.lockerCode)}`}>
+                {t("history")}
+              </Link>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

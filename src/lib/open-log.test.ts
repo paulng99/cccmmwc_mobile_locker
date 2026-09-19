@@ -8,6 +8,7 @@ import {
   mapHeaderRow,
   formatHkDate,
   overlapFromDate,
+  doorTone,
 } from "./open-log.ts";
 
 describe("parseLockerDoor", () => {
@@ -86,5 +87,19 @@ describe("parseDataRow", () => {
 describe("overlapFromDate", () => {
   it("uses first import date when never synced", () => {
     assert.equal(overlapFromDate(null, "2025-09-01"), "2025-09-01");
+  });
+});
+
+describe("doorTone", () => {
+  it("marks empty lockers vacant", () => {
+    assert.equal(doorTone(null, "2026-09-19"), "vacant");
+  });
+
+  it("marks same Hong Kong date as used today", () => {
+    assert.equal(doorTone("2026-09-19 10:05:50", "2026-09-19"), "usedToday");
+  });
+
+  it("marks older dates occupied", () => {
+    assert.equal(doorTone("2026-09-02 10:05:50", "2026-09-19"), "occupied");
   });
 });

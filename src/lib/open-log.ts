@@ -1,4 +1,14 @@
 export const CABINETS = ["A", "B", "C", "D", "E", "F", "G"] as const;
+export const LOCKER_GRID_COLS = 6;
+export const LOCKER_GRID_ROWS = 20;
+export const LOCKER_GRID_SIZE = LOCKER_GRID_COLS * LOCKER_GRID_ROWS;
+
+export type DoorTone = "vacant" | "usedToday" | "occupied";
+
+export function doorTone(lastOpenedAt: string | null | undefined, today: string): DoorTone {
+  if (!lastOpenedAt) return "vacant";
+  return lastOpenedAt.slice(0, 10) === today ? "usedToday" : "occupied";
+}
 export type Cabinet = (typeof CABINETS)[number];
 
 export type ParsedLocker = {
