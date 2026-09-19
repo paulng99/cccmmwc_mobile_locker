@@ -7,6 +7,8 @@
 
 你說「開始寫」之後才實作網頁。
 
+**內聯網探測（2026-09-19）：** 雲端 Agent、Zo 都連不到 `10.127.7.200`（timeout）。你這部校內電腦可以開該網頁，但這個 Agent **不是跑在你的電腦上**。要讓我直接試 OpenLog，請把下次 Agent 跑在校內這部機的 Cursor **Self-hosted worker**（見規格第 13 節）。
+
 ---
 
 ## 1. 產品目標
@@ -261,3 +263,24 @@ Google 登入、校外存取、遙距開箱、學生自助、推播、改原廠 
 4. 學生／箱門首頁（每櫃 001–120）與以往記錄。
 5. 內聯網探測、Playwright 注入 sessionStorage、人手同步、09:45／18:30。
 6. 你在校內 Windows 用真實 session 驗一次。
+
+---
+
+## 13. 為何我現在還不能「用你的電腦試」
+
+這個對話裡的 Agent 跑在 **Cursor 雲端 VM**（hostname `cursor`），不是你面前那部內聯網電腦。因此：
+
+- 雲端 `curl http://10.127.7.200:17789` → 逾時
+- 你的瀏覽器可以開同一網址 → 正常（你在校網）
+
+帳號下目前有一部已連線的 Self-hosted worker：`PaulMac mini`。**這次任務沒有跑在那部機上**。
+
+要讓我直接開 OpenLog、對 API、試導出 Excel，請擇一：
+
+1. 在**這部內聯網電腦**開 Cursor → Settings → Self-hosted worker / `cursor worker start`，然後用該 worker **開一個新的 Cloud Agent**（或把這次任務改派到該 worker）。
+2. 或在 Cursor 用 **本機 Agent**（不要 Cloud），在這部校內電腦開同一倉庫對話。
+
+完成後我就可以：探測頁面、找出導出 Excel 的 API、再用你提供的 sessionStorage 試拉 `2025-09-01` 起的紀錄。
+
+在此之前我仍可先寫不依賴內聯網的部分（登入、雙語 UI、Excel 解析、PostgreSQL）。你回「開始寫」或 worker 接上後我繼續。
+
