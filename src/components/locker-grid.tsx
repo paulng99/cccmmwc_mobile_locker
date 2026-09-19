@@ -48,8 +48,9 @@ export function LockerGrid() {
       <div className="locker-grid">
         {doors.map((door) => {
           const tone = doorTone(door.lastOpenedAt, today, door.assigned);
+          const look = door.lastOpenedAt ? tone : "vacant";
           return (
-            <article key={door.lockerCode} className={`door ${tone}`}>
+            <article key={door.lockerCode} className={`door ${look}`}>
               <div className="no">{door.doorNo}</div>
               {tone === "vacant" ? (
                 <div className="door-meta">{t("vacant")}</div>

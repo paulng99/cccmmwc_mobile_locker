@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
+import { CabinetLink } from "@/components/cabinet-link";
 import { fetchFrpUserExcelFromIntranet, probeIntranet } from "@/lib/intranet";
 
 type Settings = {
@@ -104,7 +105,20 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     }
   }
 
-  const lockerUsersUrl = `${form.intranetBaseUrl.replace(/\/$/, "")}/#/Users/FRPUser`;
+  async function saveBeforeOpen() {
+    const response = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    if (!response.ok) {
+      setError(t("saveFail"));
+      return false;
+    }
+    setSaved(true);
+    setError(null);
+    return true;
+  }
 
   return (
     <>
@@ -161,9 +175,9 @@ export function SettingsForm({ initial }: { initial: Settings }) {
       <h2>{t("exportMapping")}</h2>
       <p className="hint">
         {t("exportMappingHint")}{" "}
-        <a href={lockerUsersUrl} target="_blank" rel="noreferrer">
+        <CabinetLink hash="#/Users/FRPUser" beforeOpen={saveBeforeOpen}>
           {t("openFrpUser")}
-        </a>
+        </CabinetLink>
       </p>
       <div className="sync-row">
         <button className="primary" type="button" onClick={importFromIntranet} disabled={busy}>

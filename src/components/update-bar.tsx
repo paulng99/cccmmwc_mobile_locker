@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
+import { CabinetLink } from "@/components/cabinet-link";
 import { fetchExcelFromIntranet, probeIntranet } from "@/lib/intranet";
 import { formatHkDateTime } from "@/lib/open-log";
 
@@ -115,10 +116,6 @@ export function UpdateBar() {
     }
   }
 
-  const lockerUrl = settings?.intranetBaseUrl
-    ? settings.intranetBaseUrl.replace(/\/$/, "")
-    : "http://10.127.7.200:17789";
-
   return (
     <section className="card">
       <div className="sync-row">
@@ -147,9 +144,7 @@ export function UpdateBar() {
       </div>
       <p className="hint">
         {t("uploadHint")}{" "}
-        <a href={lockerUrl} target="_blank" rel="noreferrer">
-          {t("openLocker")}
-        </a>
+        <CabinetLink hash="#/Logs/OpenLog">{t("openLocker")}</CabinetLink>
       </p>
       {message ? <p className="okmsg">{message}</p> : null}
       {error ? <p className="alert">{error}</p> : null}

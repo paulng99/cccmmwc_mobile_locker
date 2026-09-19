@@ -178,15 +178,16 @@ button, input, select { font: inherit; }
   min-height: 86px;
   color: #0f172a;
 }
-.door.vacant {
-  background: rgba(148, 163, 184, 0.22);
-  color: #64748b;
-}
 .door.usedToday {
   background: rgba(250, 204, 21, 0.28);
 }
 .door.occupied {
   background: rgba(219, 234, 254, 0.55);
+}
+.door.vacant {
+  background: rgba(203, 213, 225, 0.55);
+  border-color: rgba(148, 163, 184, 0.55);
+  color: #64748b;
 }
 .door .no { font-weight: 800; color: #1d4ed8; }
 .door-name { font-weight: 700; }

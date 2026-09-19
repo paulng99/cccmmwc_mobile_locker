@@ -19,6 +19,7 @@ services:
     build: .
     ports:
       - "3000:3000"
+      - "3001:3001"
     environment:
       DATABASE_URL: postgresql://locker:locker@db:5432/locker
       SESSION_SECRET: ${SESSION_SECRET:-replace-with-at-least-32-character-secret}
