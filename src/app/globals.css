@@ -86,10 +86,21 @@ button, input, select { font: inherit; }
 .hint a { color: #1d4ed8; font-weight: 700; text-decoration: underline; }
 
 .table { width: 100%; border-collapse: collapse; }
-.table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e2e8f0; }
+.table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
 .table th { color: #1e3a8a; font-size: 13px; }
 .table tr.usedToday td { background: rgba(250, 204, 21, 0.28); }
 .table tr.vacant td { background: rgba(148, 163, 184, 0.22); color: #64748b; }
+.table tr.unused td { background: rgba(248, 113, 113, 0.28); }
+.table tr.idleToday td { background: rgba(74, 222, 128, 0.22); }
+.table th .sort {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
+}
 
 .search { width: min(420px, 100%); padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 12px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
@@ -103,7 +114,7 @@ button, input, select { font: inherit; }
   cursor: pointer;
 }
 .filters button.active { background: #2563eb; border-color: #2563eb; color: white; }
-.student-group { margin-top: 18px; }
+.student-group { margin-top: 18px; overflow-x: auto; }
 .student-group h2 {
   display: flex;
   align-items: center;

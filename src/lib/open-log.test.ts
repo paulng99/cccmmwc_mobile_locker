@@ -11,6 +11,8 @@ import {
   doorTone,
   parseSchoolPlace,
   compareSchoolPlace,
+  parseUnusedStudentNos,
+  studentRowTone,
 } from "./open-log.ts";
 
 describe("parseLockerDoor", () => {
@@ -125,6 +127,30 @@ describe("parseSchoolPlace", () => {
       rows.map((row) => `${row.classGroup}${String(row.classNo).padStart(2, "0")}`),
       ["1A02", "1A10", "1C10", "2A03"],
     );
+  });
+});
+
+describe("parseUnusedStudentNos", () => {
+  it("reads one student number per line", () => {
+    assert.deepEqual(parseUnusedStudentNos("1C02\n1C23\n5A22"), ["1C02", "1C23", "5A22"]);
+  });
+
+  it("normalizes spaces and case", () => {
+    assert.deepEqual(parseUnusedStudentNos(" 1c02 , 1c23 "), ["1C02", "1C23"]);
+  });
+});
+
+describe("studentRowTone", () => {
+  it("marks unused students red", () => {
+    assert.equal(studentRowTone({ unused: true, todayOpenCount: 0 }), "unused");
+  });
+
+  it("marks today's users yellow", () => {
+    assert.equal(studentRowTone({ unused: false, todayOpenCount: 2 }), "usedToday");
+  });
+
+  it("marks no open today as green when not unused", () => {
+    assert.equal(studentRowTone({ unused: false, todayOpenCount: 0 }), "idleToday");
   });
 });
 

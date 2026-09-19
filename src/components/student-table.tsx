@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
-import { compareSchoolPlace, doorTone, hkToday, parseSchoolPlace } from "@/lib/open-log";
+import { compareSchoolPlace, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
 
 type Row = {
   studentNo: string;
@@ -11,17 +11,21 @@ type Row = {
   studentName: string | null;
   lastLockerCode: string;
   lastOpenedAt: string | null;
+  unused: boolean;
+  todayOpenCount: number;
 };
 
 type Placed = Row & ReturnType<typeof parseSchoolPlace>;
+type SortKey = "form" | "class" | "studentNo" | "studentName" | "lastLocker" | "lastUsed" | "unused" | "todayOnce";
 
 export function StudentTable() {
   const t = useTranslations();
   const [q, setQ] = useState("");
   const [form, setForm] = useState("all");
   const [klass, setKlass] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("studentNo");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [rows, setRows] = useState<Row[]>([]);
-  const today = hkToday();
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -35,9 +39,7 @@ export function StudentTable() {
   }, [q]);
 
   const placed = useMemo<Placed[]>(() => {
-    return rows
-      .map((row) => ({ ...row, ...parseSchoolPlace(row.studentNo, row.classCode) }))
-      .sort((a, b) => compareSchoolPlace(a, b) || a.studentNo.localeCompare(b.studentNo));
+    return rows.map((row) => ({ ...row, ...parseSchoolPlace(row.studentNo, row.classCode) }));
   }, [rows]);
 
   const forms = useMemo(() => {
@@ -51,11 +53,47 @@ export function StudentTable() {
     return [...set].sort((a, b) => a.localeCompare(b, "en"));
   }, [placed, form]);
 
-  const visible = placed.filter((row) => {
-    if (form !== "all" && row.form !== form) return false;
-    if (klass !== "all" && row.classGroup !== klass) return false;
-    return true;
-  });
+  const visible = useMemo(() => {
+    const filtered = placed.filter((row) => {
+      if (form !== "all" && row.form !== form) return false;
+      if (klass !== "all" && row.classGroup !== klass) return false;
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    return filtered.sort((a, b) => {
+      const bySchool = compareSchoolPlace(a, b);
+      const value = (row: Placed) => {
+        switch (sortKey) {
+          case "form":
+            return Number(row.form || 99);
+          case "class":
+            return row.classGroup || row.classCode;
+          case "studentNo":
+            return row.classNo || row.studentNo;
+          case "studentName":
+            return row.studentName ?? "";
+          case "lastLocker":
+            return row.lastLockerCode;
+          case "lastUsed":
+            return row.lastOpenedAt ?? "";
+          case "unused":
+            return row.unused ? 1 : 0;
+          case "todayOnce":
+            return row.todayOpenCount;
+          default:
+            return 0;
+        }
+      };
+      const left = value(a);
+      const right = value(b);
+      if (typeof left === "number" && typeof right === "number" && left !== right) {
+        return (left - right) * dir;
+      }
+      const text = String(left).localeCompare(String(right), "en");
+      if (text !== 0) return text * dir;
+      return bySchool;
+    });
+  }, [placed, form, klass, sortKey, sortDir]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Placed[]>();
@@ -67,6 +105,31 @@ export function StudentTable() {
     }
     return [...map.entries()];
   }, [visible, t]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((value) => (value === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir("asc");
+  }
+
+  function sortMark(key: SortKey) {
+    if (sortKey !== key) return "";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  }
+
+  function head(key: SortKey, label: string) {
+    return (
+      <th>
+        <button type="button" className="sort" onClick={() => toggleSort(key)}>
+          {label}
+          {sortMark(key)}
+        </button>
+      </th>
+    );
+  }
 
   return (
     <section className="card">
@@ -117,12 +180,14 @@ export function StudentTable() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t("form")}</th>
-                  <th>{t("class")}</th>
-                  <th>{t("studentNo")}</th>
-                  <th>{t("studentName")}</th>
-                  <th>{t("lastLocker")}</th>
-                  <th>{t("lastUsed")}</th>
+                  {head("form", t("form"))}
+                  {head("class", t("class"))}
+                  {head("studentNo", t("studentNo"))}
+                  {head("studentName", t("studentName"))}
+                  {head("lastLocker", t("lastLocker"))}
+                  {head("lastUsed", t("lastUsed"))}
+                  {head("unused", t("unused"))}
+                  {head("todayOnce", t("todayOnce"))}
                   <th></th>
                 </tr>
               </thead>
@@ -130,11 +195,7 @@ export function StudentTable() {
                 {list.map((row) => (
                   <tr
                     key={row.studentNo}
-                    className={
-                      !row.lastOpenedAt || !row.lastLockerCode
-                        ? "vacant"
-                        : doorTone(row.lastOpenedAt, today)
-                    }
+                    className={studentRowTone({ unused: row.unused, todayOpenCount: row.todayOpenCount })}
                   >
                     <td>{row.form ? t("formGrade", { id: row.form }) : "—"}</td>
                     <td>{row.classGroup || row.classCode || "—"}</td>
@@ -142,6 +203,8 @@ export function StudentTable() {
                     <td>{row.studentName ?? ""}</td>
                     <td>{row.lastLockerCode || t("vacant")}</td>
                     <td>{row.lastOpenedAt ?? t("vacant")}</td>
+                    <td>{row.unused ? t("yes") : ""}</td>
+                    <td>{row.todayOpenCount === 1 ? t("yes") : ""}</td>
                     <td>
                       <Link className="history" href={`/history?studentNo=${encodeURIComponent(row.studentNo)}`}>
                         {t("history")}

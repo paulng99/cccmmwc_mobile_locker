@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, readUnusedStudentNos, writeUnusedStudentNos } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { overlapFromDate, hkToday } from "@/lib/open-log";
 
@@ -19,6 +19,7 @@ export async function GET() {
     exportApiPath: settings.exportApiPath,
     firstImportDate: settings.firstImportDate,
     doorsPerCabinet: settings.doorsPerCabinet,
+    unusedStudentNos: await readUnusedStudentNos(),
     lastSuccessAt: sync.lastSuccessAt,
     lastSuccessOpenDate: sync.lastSuccessOpenDate,
     lastError: sync.lastError,
@@ -38,6 +39,7 @@ export async function PUT(request: Request) {
     exportApiPath?: string;
     firstImportDate?: string;
     doorsPerCabinet?: number;
+    unusedStudentNos?: string;
   };
   const updated = await prisma.appSettings.upsert({
     where: { id: 1 },
@@ -51,6 +53,9 @@ export async function PUT(request: Request) {
       doorsPerCabinet: body.doorsPerCabinet,
     },
   });
+  if (body.unusedStudentNos !== undefined) {
+    await writeUnusedStudentNos(body.unusedStudentNos);
+  }
   return NextResponse.json({
     ok: true,
     hasSession: Boolean(updated.sessionPayload),

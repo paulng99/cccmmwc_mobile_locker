@@ -10,6 +10,7 @@ type Settings = {
   exportApiPath: string;
   firstImportDate: string;
   doorsPerCabinet: number;
+  unusedStudentNos: string;
 };
 
 export function SettingsForm({ initial }: { initial: Settings }) {
@@ -62,6 +63,16 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           value={form.doorsPerCabinet}
           onChange={(e) => setForm({ ...form, doorsPerCabinet: Number(e.target.value) })}
         />
+      </label>
+      <label className="field">
+        {t("unusedList")}
+        <textarea
+          rows={8}
+          value={form.unusedStudentNos}
+          onChange={(e) => setForm({ ...form, unusedStudentNos: e.target.value })}
+          placeholder={"1C02\n1C23\n5A22"}
+        />
+        <small>{t("unusedHint")}</small>
       </label>
       <button className="primary" type="submit">
         {t("save")}

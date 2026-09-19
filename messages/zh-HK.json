@@ -59,5 +59,10 @@
   "openLocker": "開啟智能柜（記錄管理 → 开箱记录）",
   "uploadFail": "未能匯入呢個 Excel。請用智能柜「导出Excel」嘅檔案。",
   "language": "語言",
-  "nowHkt": "yyyy-mm-dd HH:mm:ss HKT"
+  "nowHkt": "yyyy-mm-dd HH:mm:ss HKT",
+  "unusedList": "不使用手機櫃名單",
+  "unusedHint": "每行一個學號，例如 1C02。這些學生會以淺紅顯示。",
+  "unused": "不使用",
+  "todayOnce": "當天只開1次",
+  "yes": "是"
 }

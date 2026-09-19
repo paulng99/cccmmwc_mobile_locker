@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { redirect } from "@/i18n/routing";
-import { prisma } from "@/lib/prisma";
+import { prisma, readUnusedStudentNos } from "@/lib/prisma";
 import { Shell } from "@/components/shell";
 import { SettingsForm } from "@/components/settings-form";
 
@@ -10,11 +10,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const { locale } = await params;
   const session = await getSession();
   if (!session.userId) redirect({ href: "/login", locale });
-  const settings = await prisma.appSettings.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1 },
-  });
+  const [settings, unusedStudentNos] = await Promise.all([
+    prisma.appSettings.upsert({
+      where: { id: 1 },
+      update: {},
+      create: { id: 1 },
+    }),
+    readUnusedStudentNos(),
+  ]);
   return (
     <Shell loginName={session.loginName}>
       <SettingsForm
@@ -25,6 +28,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
           exportApiPath: settings.exportApiPath,
           firstImportDate: settings.firstImportDate,
           doorsPerCabinet: settings.doorsPerCabinet,
+          unusedStudentNos,
         }}
       />
     </Shell>

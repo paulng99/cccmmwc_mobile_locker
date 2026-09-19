@@ -59,5 +59,10 @@
   "openLocker": "Open 智能柜 (记录管理 → 开箱记录)",
   "uploadFail": "Could not import that Excel. Use the file from 智能柜 → 导出Excel.",
   "language": "Language",
-  "nowHkt": "yyyy-mm-dd HH:mm:ss HKT"
+  "nowHkt": "yyyy-mm-dd HH:mm:ss HKT",
+  "unusedList": "Students not using lockers",
+  "unusedHint": "One student number per line, e.g. 1C02. These students are shown in light red.",
+  "unused": "Not using",
+  "todayOnce": "Opened once today",
+  "yes": "Yes"
 }

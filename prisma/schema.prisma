@@ -26,6 +26,7 @@ model AppSettings {
   exportApiPath      String   @default("") @map("export_api_path")
   firstImportDate    String   @default("2025-09-01") @map("first_import_date")
   doorsPerCabinet    Int      @default(120) @map("doors_per_cabinet")
+  unusedStudentNos   String   @default("") @map("unused_student_nos")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")

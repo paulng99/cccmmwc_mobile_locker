@@ -4,6 +4,22 @@ export const LOCKER_GRID_ROWS = 20;
 export const LOCKER_GRID_SIZE = LOCKER_GRID_COLS * LOCKER_GRID_ROWS;
 
 export type DoorTone = "vacant" | "usedToday" | "occupied";
+export type StudentRowTone = "unused" | "usedToday" | "idleToday";
+
+export function parseUnusedStudentNos(text: string | null | undefined): string[] {
+  return [...new Set(
+    (text ?? "")
+      .split(/[\s,;]+/)
+      .map((item) => item.trim().toUpperCase())
+      .filter(Boolean),
+  )];
+}
+
+export function studentRowTone(options: { unused: boolean; todayOpenCount: number }): StudentRowTone {
+  if (options.unused) return "unused";
+  if (options.todayOpenCount > 0) return "usedToday";
+  return "idleToday";
+}
 
 export function doorTone(lastOpenedAt: string | null | undefined, today: string): DoorTone {
   if (!lastOpenedAt) return "vacant";
