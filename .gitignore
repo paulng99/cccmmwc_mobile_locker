@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+.env.local
+*.xlsx
+!fixtures/.gitkeep
+/prisma/*.db
+.DS_Store
