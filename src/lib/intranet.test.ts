@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   candidateExportUrls,
+  candidateFrpUserExportUrls,
   fetchExcelFromIntranet,
   normalizeSessionPayload,
   parseAuthInput,
@@ -66,6 +67,13 @@ describe("candidateExportUrls", () => {
     const urls = candidateExportUrls("http://10.127.7.200:17789/", "/custom/export", "2025-09-01", "2026-09-19");
     assert.ok(urls.some((url) => url.startsWith("http://10.127.7.200:17789/custom/export")));
     assert.ok(urls.some((url) => url.includes("/Logs/OpenLog/ExportExcel")));
+  });
+});
+
+describe("candidateFrpUserExportUrls", () => {
+  it("uses the WalkingTec FRPUser export path", () => {
+    const urls = candidateFrpUserExportUrls("http://10.127.7.200:17789/");
+    assert.equal(urls[0], "http://10.127.7.200:17789/Users/FRPUser/ExportExcel?1=1");
   });
 });
 

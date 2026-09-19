@@ -166,4 +166,8 @@ describe("doorTone", () => {
   it("marks older dates occupied", () => {
     assert.equal(doorTone("2026-09-02 10:05:50", "2026-09-19"), "occupied");
   });
+
+  it("marks an assigned locker occupied even without last use", () => {
+    assert.equal(doorTone(null, "2026-09-19", true), "occupied");
+  });
 });

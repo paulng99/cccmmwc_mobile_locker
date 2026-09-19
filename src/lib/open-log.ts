@@ -21,9 +21,15 @@ export function studentRowTone(options: { unused: boolean; todayOpenCount: numbe
   return "idleToday";
 }
 
-export function doorTone(lastOpenedAt: string | null | undefined, today: string): DoorTone {
-  if (!lastOpenedAt) return "vacant";
-  return lastOpenedAt.slice(0, 10) === today ? "usedToday" : "occupied";
+export function doorTone(
+  lastOpenedAt: string | null | undefined,
+  today: string,
+  assigned = false,
+): DoorTone {
+  if (lastOpenedAt) {
+    return lastOpenedAt.slice(0, 10) === today ? "usedToday" : "occupied";
+  }
+  return assigned ? "occupied" : "vacant";
 }
 
 export type SchoolPlace = {
@@ -91,6 +97,17 @@ export type OpenLogRow = {
   raw: Record<string, string>;
 };
 
+export type FrpUserRow = {
+  studentName: string | null;
+  studentNo: string;
+  classCode: string;
+  lockerRaw: string;
+  cabinet: Cabinet | "";
+  doorNo: string;
+  lockerCode: string;
+  raw: Record<string, string>;
+};
+
 const HEADER_MAP: Record<string, string> = {
   用户名: "studentName",
   用户编号: "studentNo",
@@ -101,6 +118,15 @@ const HEADER_MAP: Record<string, string> = {
   管理员: "adminName",
   备注: "remark",
   开箱时间: "openedAt",
+};
+
+const FRP_HEADER_MAP: Record<string, string> = {
+  姓名: "studentName",
+  账号: "studentNo",
+  用户编号: "studentNo",
+  所属单位: "classCode",
+  授权箱门: "lockerRaw",
+  箱门: "lockerRaw",
 };
 
 export function parseLockerDoor(raw: string): ParsedLocker | null {
@@ -194,9 +220,17 @@ export function normalizeHeader(header: string): string {
 }
 
 export function mapHeaderRow(headers: unknown[]): Record<number, string> {
+  return mapNamedHeaderRow(headers, HEADER_MAP);
+}
+
+export function mapFrpHeaderRow(headers: unknown[]): Record<number, string> {
+  return mapNamedHeaderRow(headers, FRP_HEADER_MAP);
+}
+
+function mapNamedHeaderRow(headers: unknown[], names: Record<string, string>): Record<number, string> {
   const map: Record<number, string> = {};
   headers.forEach((header, index) => {
-    const key = HEADER_MAP[normalizeHeader(cellText(header))];
+    const key = names[normalizeHeader(cellText(header))];
     if (key) map[index] = key;
   });
   return map;
@@ -236,6 +270,38 @@ export function parseDataRow(
     adminName: (values.adminName ?? "").trim(),
     remark: (values.remark ?? "").trim(),
     openedAt,
+    raw,
+  };
+}
+
+export function parseFrpUserRow(
+  cells: unknown[],
+  headerMap: Record<number, string>,
+): FrpUserRow | { error: string } {
+  const raw: Record<string, string> = {};
+  const values: Record<string, string> = {};
+  Object.entries(headerMap).forEach(([index, key]) => {
+    const text = cellText(cells[Number(index)]);
+    raw[key] = text;
+    values[key] = text;
+  });
+
+  const studentNo = (values.studentNo ?? "").trim();
+  if (!studentNo) return { error: "missing_student_no" };
+
+  const lockerRaw = (values.lockerRaw ?? "").trim();
+  const locker = lockerRaw ? parseLockerDoor(lockerRaw) : null;
+  if (lockerRaw && !locker) return { error: "invalid_locker" };
+
+  const place = parseSchoolPlace(studentNo, values.classCode ?? "");
+  return {
+    studentName: emptyToNull(values.studentName ?? ""),
+    studentNo,
+    classCode: place.classGroup || (values.classCode ?? "").trim(),
+    lockerRaw,
+    cabinet: locker?.cabinet ?? "",
+    doorNo: locker?.doorNo ?? "",
+    lockerCode: locker?.lockerCode ?? "",
     raw,
   };
 }
