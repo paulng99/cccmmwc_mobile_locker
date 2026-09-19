@@ -35,6 +35,19 @@ describe("parseAuthInput", () => {
     assert.deepEqual(parseAuthInput(cookie), { kind: "cookie", cookie });
   });
 
+  it("extracts only the Cookie line from a raw HTTP request", () => {
+    const raw = [
+      "GET /api/Home/GetHomeData HTTP/1.1",
+      "Accept: */*",
+      "Cookie: pagemode=Tab; Face.Session=abc123; .AspNetCore.Face.CookieWithJwtAuth=token",
+      "Host: 10.127.7.200:17789",
+    ].join("\n");
+    assert.deepEqual(parseAuthInput(raw), {
+      kind: "cookie",
+      cookie: "pagemode=Tab; Face.Session=abc123; .AspNetCore.Face.CookieWithJwtAuth=token",
+    });
+  });
+
   it("does not treat tea analytics json as a locker cookie", () => {
     const parsed = parseAuthInput(
       '{"sessionId":"584146e7-1515-497e-bd25-6c535a626e58","timestamp":1}',

@@ -62,26 +62,27 @@ export function UpdateBar() {
     setError(null);
     const reachable = await probeIntranet(settings.intranetBaseUrl);
     setOnline(reachable);
-    if (!reachable) {
-      setError(t("intranetFail"));
-      setBusy(false);
-      return;
+    if (reachable) {
+      try {
+        const excel = await fetchExcelFromIntranet({
+          baseUrl: settings.intranetBaseUrl,
+          exportApiPath: settings.exportApiPath,
+          storageKey: settings.sessionStorageKey,
+          sessionInput: settings.sessionPayload,
+          from: settings.from,
+          to: settings.to,
+        });
+        await importWorkbook(
+          new Blob([excel], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+          "openlog.xlsx",
+        );
+        setBusy(false);
+        return;
+      } catch {
+        setMessage(t("corsFail"));
+      }
     }
     try {
-      const excel = await fetchExcelFromIntranet({
-        baseUrl: settings.intranetBaseUrl,
-        exportApiPath: settings.exportApiPath,
-        storageKey: settings.sessionStorageKey,
-        sessionInput: settings.sessionPayload,
-        from: settings.from,
-        to: settings.to,
-      });
-      await importWorkbook(
-        new Blob([excel], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-        "openlog.xlsx",
-      );
-    } catch {
-      setMessage(t("corsFail"));
       const proxy = await fetch("/api/sync/proxy", { method: "POST" });
       const result = (await proxy.json()) as { ok?: boolean; inserted?: number; error?: string };
       if (!proxy.ok) {
@@ -91,6 +92,9 @@ export function UpdateBar() {
         setMessage(result.inserted ? t("updateOk", { count: result.inserted }) : t("updateNone"));
         await load();
       }
+    } catch {
+      setError(reachable ? t("proxyFail") : t("intranetFail"));
+      setMessage(null);
     } finally {
       setBusy(false);
     }

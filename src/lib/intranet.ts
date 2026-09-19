@@ -23,6 +23,22 @@ export function normalizeSessionPayload(input: string): SessionPayload | null {
   }
 }
 
+export function extractCookieHeader(input: string): string | null {
+  const text = input.trim();
+  if (!text) return null;
+  const headerMatch = text.match(/^cookie:\s*(.+)$/im);
+  if (headerMatch?.[1]) {
+    return headerMatch[1].trim();
+  }
+  if (/^GET |^POST |^HTTP\//m.test(text)) {
+    return null;
+  }
+  if (text.includes("=") && !text.startsWith("{")) {
+    return text;
+  }
+  return null;
+}
+
 export function parseAuthInput(input: string): AuthInput {
   const text = input.trim();
   if (!text) return { kind: "none" };
@@ -32,8 +48,9 @@ export function parseAuthInput(input: string): AuthInput {
   } catch {
     // Cookie strings are not JSON.
   }
-  if (text.includes("=")) {
-    return { kind: "cookie", cookie: text };
+  const cookie = extractCookieHeader(text);
+  if (cookie) {
+    return { kind: "cookie", cookie };
   }
   return { kind: "none" };
 }
@@ -63,6 +80,19 @@ export function candidateExportUrls(baseUrl: string, exportApiPath: string, _fro
     const prefix = path.startsWith("http") ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
     return prefix.includes("?") ? prefix : `${prefix}?1=1`;
   });
+}
+
+export async function probeIntranet(baseUrl: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    await fetch(baseUrl, { mode: "no-cors", cache: "no-store", signal: controller.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function looksLikeLoginHtml(buffer: ArrayBuffer, contentType: string): boolean {
@@ -101,13 +131,16 @@ export async function fetchExcelFromIntranet(options: {
       if (auth.kind === "cookie") {
         headers.Cookie = auth.cookie;
       }
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
       const response = await fetch(url, {
         method: "POST",
         credentials: "include",
         headers,
         body: "",
         cache: "no-store",
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timer));
       if (!response.ok) {
         lastError = new Error(`export_http_${response.status}`);
         continue;
@@ -125,7 +158,11 @@ export async function fetchExcelFromIntranet(options: {
       return buffer;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("export_failed");
-      if (lastError.name === "TypeError" || lastError.message.includes("Failed to fetch")) {
+      if (
+        lastError.name === "TypeError" ||
+        lastError.name === "AbortError" ||
+        lastError.message.includes("Failed to fetch")
+      ) {
         throw Object.assign(new Error("cors_or_network"), { cause: lastError });
       }
     }
