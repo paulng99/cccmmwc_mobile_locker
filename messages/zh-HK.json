@@ -64,5 +64,8 @@
   "unusedHint": "每行一個學號，例如 1C02。這些學生會以淺紅顯示。",
   "unused": "不使用",
   "todayOnce": "當天只開1次",
-  "yes": "是"
+  "yes": "是",
+  "exportMapping": "學生與箱門關係",
+  "exportMappingHint": "撳「導入 Excel」下載學生與箱門對照表，即可知每格手機櫃對應邊位學生。檔案有「箱門」與「學生」兩張工作表。",
+  "exportExcel": "導入 Excel"
 }

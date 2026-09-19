@@ -64,5 +64,8 @@
   "unusedHint": "One student number per line, e.g. 1C02. These students are shown in light red.",
   "unused": "Not using",
   "todayOnce": "Opened once today",
-  "yes": "Yes"
+  "yes": "Yes",
+  "exportMapping": "Student–locker mapping",
+  "exportMappingHint": "Click Import Excel to download the student–locker mapping. The file has Lockers and Students sheets.",
+  "exportExcel": "Import Excel"
 }

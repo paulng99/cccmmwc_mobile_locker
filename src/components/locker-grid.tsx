@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
+import { HistoryIcon } from "@/components/icons";
 import { CABINETS, doorTone, hkToday } from "@/lib/open-log";
 
 type Door = {
@@ -60,8 +61,13 @@ export function LockerGrid() {
                   <div className="door-meta">{door.lastOpenedAt}</div>
                 </>
               )}
-              <Link className="history" href={`/history?lockerCode=${encodeURIComponent(door.lockerCode)}`}>
-                {t("history")}
+              <Link
+                className="history"
+                href={`/history?lockerCode=${encodeURIComponent(door.lockerCode)}`}
+                aria-label={t("history")}
+                title={t("history")}
+              >
+                <HistoryIcon />
               </Link>
             </article>
           );

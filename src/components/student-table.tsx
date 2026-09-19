@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
+import { HistoryIcon, YesIcon } from "@/components/icons";
 import { compareSchoolPlace, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
 
 type Row = {
@@ -203,11 +204,16 @@ export function StudentTable() {
                     <td>{row.studentName ?? ""}</td>
                     <td>{row.lastLockerCode || t("vacant")}</td>
                     <td>{row.lastOpenedAt ?? t("vacant")}</td>
-                    <td>{row.unused ? t("yes") : ""}</td>
-                    <td>{row.todayOpenCount === 1 ? t("yes") : ""}</td>
-                    <td>
-                      <Link className="history" href={`/history?studentNo=${encodeURIComponent(row.studentNo)}`}>
-                        {t("history")}
+                    <td className="mark">{row.unused ? <YesIcon label={t("yes")} /> : ""}</td>
+                    <td className="mark">{row.todayOpenCount === 1 ? <YesIcon label={t("yes")} /> : ""}</td>
+                    <td className="mark">
+                      <Link
+                        className="history"
+                        href={`/history?studentNo=${encodeURIComponent(row.studentNo)}`}
+                        aria-label={t("history")}
+                        title={t("history")}
+                      >
+                        <HistoryIcon />
                       </Link>
                     </td>
                   </tr>

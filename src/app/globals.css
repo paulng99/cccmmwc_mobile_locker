@@ -61,6 +61,7 @@ button, input, select { font: inherit; }
 .warn { background: #ffedd5; color: #9a3412; }
 
 .primary {
+  display: inline-block;
   background: linear-gradient(180deg, #2563eb, #1d4ed8);
   color: white;
   border: 0;
@@ -190,18 +191,64 @@ button, input, select { font: inherit; }
 .door .no { font-weight: 800; color: #1d4ed8; }
 .door-name { font-weight: 700; }
 .door-meta { font-size: 12px; line-height: 1.35; }
+.table td.mark { text-align: center; }
+.icon-yes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #34d399, #047857);
+  box-shadow: 0 4px 10px rgba(4, 120, 87, 0.28);
+}
+.icon-yes svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.icon-yes path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .history {
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 12px;
-  color: #1d4ed8;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #38bdf8, #2563eb);
+  color: white;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22);
+}
+.history:hover { filter: brightness(1.06); }
+.history svg {
+  display: block;
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .login {
   max-width: 420px;
   margin: 12vh auto;
 }
+.card > h2 {
+  margin: 0;
+  color: #0b3b8c;
+  font-size: 20px;
+}
+.card > h2 + .hint { margin-top: 8px; }
+.card .sync-row { margin-top: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 .field input, .field textarea {
   padding: 10px 12px;

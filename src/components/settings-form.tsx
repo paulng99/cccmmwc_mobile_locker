@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 type Settings = {
@@ -15,6 +15,7 @@ type Settings = {
 
 export function SettingsForm({ initial }: { initial: Settings }) {
   const t = useTranslations();
+  const locale = useLocale();
   const [form, setForm] = useState(initial);
   const [saved, setSaved] = useState(false);
 
@@ -29,6 +30,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   }
 
   return (
+    <>
     <form className="card" onSubmit={onSubmit}>
       <h1>{t("settings")}</h1>
       {saved ? <p className="okmsg">{t("saved")}</p> : null}
@@ -78,5 +80,15 @@ export function SettingsForm({ initial }: { initial: Settings }) {
         {t("save")}
       </button>
     </form>
+    <section className="card">
+      <h2>{t("exportMapping")}</h2>
+      <p className="hint">{t("exportMappingHint")}</p>
+      <div className="sync-row">
+        <a className="primary" href={`/api/export/student-lockers?locale=${locale}`}>
+          {t("exportExcel")}
+        </a>
+      </div>
+    </section>
+    </>
   );
 }
