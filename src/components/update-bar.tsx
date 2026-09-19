@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchExcelFromIntranet, probeIntranet } from "@/lib/intranet";
 
 type Settings = {
@@ -17,6 +17,7 @@ type Settings = {
 
 export function UpdateBar() {
   const t = useTranslations();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,6 +39,22 @@ export function UpdateBar() {
     void load();
   }, []);
 
+  function failMessage(code?: string) {
+    if (code === "missing_session") return t("missingSession");
+    if (code === "need_locker_login") return t("needLockerLogin");
+    return t("proxyFail");
+  }
+
+  async function importWorkbook(file: Blob, filename: string) {
+    const form = new FormData();
+    form.append("file", file, filename);
+    const imported = await fetch("/api/import", { method: "POST", body: form });
+    const result = (await imported.json()) as { ok?: boolean; inserted?: number; error?: string };
+    if (!imported.ok) throw new Error(result.error ?? "import_failed");
+    setMessage(result.inserted ? t("updateOk", { count: result.inserted }) : t("updateNone"));
+    await load();
+  }
+
   async function update() {
     if (!settings) return;
     setBusy(true);
@@ -50,11 +67,6 @@ export function UpdateBar() {
       setBusy(false);
       return;
     }
-    if (!settings.hasSession && !settings.sessionPayload) {
-      setError(t("missingSession"));
-      setBusy(false);
-      return;
-    }
     try {
       const excel = await fetchExcelFromIntranet({
         baseUrl: settings.intranetBaseUrl,
@@ -64,19 +76,16 @@ export function UpdateBar() {
         from: settings.from,
         to: settings.to,
       });
-      const form = new FormData();
-      form.append("file", new Blob([excel], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "openlog.xlsx");
-      const imported = await fetch("/api/import", { method: "POST", body: form });
-      const result = (await imported.json()) as { ok?: boolean; inserted?: number; error?: string };
-      if (!imported.ok) throw new Error(result.error ?? "import_failed");
-      setMessage(result.inserted ? t("updateOk", { count: result.inserted }) : t("updateNone"));
-      await load();
+      await importWorkbook(
+        new Blob([excel], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        "openlog.xlsx",
+      );
     } catch {
       setMessage(t("corsFail"));
       const proxy = await fetch("/api/sync/proxy", { method: "POST" });
       const result = (await proxy.json()) as { ok?: boolean; inserted?: number; error?: string };
       if (!proxy.ok) {
-        setError(result.error === "missing_session" ? t("missingSession") : t("proxyFail"));
+        setError(failMessage(result.error));
         setMessage(null);
       } else {
         setMessage(result.inserted ? t("updateOk", { count: result.inserted }) : t("updateNone"));
@@ -86,6 +95,26 @@ export function UpdateBar() {
       setBusy(false);
     }
   }
+
+  async function onUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      await importWorkbook(file, file.name);
+    } catch {
+      setError(t("uploadFail"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const lockerUrl = settings?.intranetBaseUrl
+    ? `${settings.intranetBaseUrl.replace(/\/$/, "")}/Logs/OpenLog`
+    : "http://10.127.7.200:17789/Logs/OpenLog";
 
   return (
     <section className="card">
@@ -102,7 +131,23 @@ export function UpdateBar() {
         <button className="primary" type="button" onClick={update} disabled={busy}>
           {busy ? t("updating") : t("update")}
         </button>
+        <button className="secondary" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
+          {t("uploadExcel")}
+        </button>
+        <input
+          ref={fileRef}
+          className="file-input"
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+          onChange={onUpload}
+        />
       </div>
+      <p className="hint">
+        {t("uploadHint")}{" "}
+        <a href={lockerUrl} target="_blank" rel="noreferrer">
+          {t("openLocker")}
+        </a>
+      </p>
       {message ? <p className="okmsg">{message}</p> : null}
       {error ? <p className="alert">{error}</p> : null}
     </section>

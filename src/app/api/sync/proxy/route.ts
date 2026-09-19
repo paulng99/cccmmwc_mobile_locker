@@ -13,9 +13,9 @@ export async function POST() {
     prisma.appSettings.findUnique({ where: { id: 1 } }),
     prisma.syncState.findUnique({ where: { id: 1 } }),
   ]);
-  if (!settings?.sessionPayload) {
-    await recordSyncError("missing_session");
-    return NextResponse.json({ ok: false, error: "missing_session" }, { status: 400 });
+  if (!settings) {
+    await recordSyncError("missing_settings");
+    return NextResponse.json({ ok: false, error: "missing_settings" }, { status: 400 });
   }
   const from = overlapFromDate(sync?.lastSuccessOpenDate ?? null, settings.firstImportDate);
   const to = hkToday();

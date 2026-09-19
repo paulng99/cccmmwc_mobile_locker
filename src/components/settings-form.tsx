@@ -41,7 +41,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           rows={4}
           value={form.sessionPayload}
           onChange={(e) => setForm({ ...form, sessionPayload: e.target.value })}
-          placeholder='{"sessionId":"...","timestamp":...}'
+          placeholder=".AspNetCore.Identity.Application=..."
         />
         <small>{t("sessionHint")}</small>
       </label>

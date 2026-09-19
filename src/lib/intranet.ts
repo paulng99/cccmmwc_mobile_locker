@@ -3,6 +3,8 @@ export type SessionPayload = {
   timestamp: number;
 };
 
+export type AuthInput = { kind: "none" } | { kind: "cookie"; cookie: string };
+
 export function normalizeSessionPayload(input: string): SessionPayload | null {
   const text = input.trim();
   if (!text) return null;
@@ -21,6 +23,21 @@ export function normalizeSessionPayload(input: string): SessionPayload | null {
   }
 }
 
+export function parseAuthInput(input: string): AuthInput {
+  const text = input.trim();
+  if (!text) return { kind: "none" };
+  try {
+    const parsed = JSON.parse(text) as { sessionId?: string; web_id?: string };
+    if (parsed.sessionId || parsed.web_id) return { kind: "none" };
+  } catch {
+    // Cookie strings are not JSON.
+  }
+  if (text.includes("=")) {
+    return { kind: "cookie", cookie: text };
+  }
+  return { kind: "none" };
+}
+
 export function exportQuery(from: string, to: string): string {
   const params = new URLSearchParams({
     startTime: `${from} 00:00:00`,
@@ -36,49 +53,24 @@ export function exportQuery(from: string, to: string): string {
   return params.toString();
 }
 
-export function candidateExportUrls(baseUrl: string, exportApiPath: string, from: string, to: string): string[] {
+export function candidateExportUrls(baseUrl: string, exportApiPath: string, _from?: string, _to?: string): string[] {
   const base = baseUrl.replace(/\/$/, "");
-  const query = exportQuery(from, to);
-  const paths = [
-    exportApiPath,
-    "/api/Logs/OpenLog/Export",
-    "/api/Logs/OpenLog/export",
-    "/api/openLog/export",
-    "/api/OpenLog/Export",
-    "/Logs/OpenLog/Export",
-  ]
+  const paths = [exportApiPath, "/Logs/OpenLog/ExportExcel"]
     .map((path) => path.trim())
     .filter(Boolean);
   const unique = [...new Set(paths)];
   return unique.map((path) => {
     const prefix = path.startsWith("http") ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
-    const joiner = prefix.includes("?") ? "&" : "?";
-    return `${prefix}${joiner}${query}`;
+    return prefix.includes("?") ? prefix : `${prefix}?1=1`;
   });
 }
 
-export function authHeaders(storageKey: string, payload: SessionPayload): HeadersInit {
-  const json = JSON.stringify(payload);
-  return {
-    Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*",
-    Cookie: `${storageKey}=${encodeURIComponent(json)}`,
-    sessionId: payload.sessionId,
-    "X-Session-Id": payload.sessionId,
-    Authorization: `Bearer ${payload.sessionId}`,
-  };
-}
-
-export async function probeIntranet(baseUrl: string): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
-  try {
-    await fetch(baseUrl, { mode: "no-cors", cache: "no-store", signal: controller.signal });
-    return true;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
+function looksLikeLoginHtml(buffer: ArrayBuffer, contentType: string): boolean {
+  const text = new TextDecoder("utf-8").decode(buffer.slice(0, 400));
+  return (
+    contentType.includes("html") ||
+    /Login\/Login|<script>var redirect=/i.test(text)
+  );
 }
 
 function looksLikeExcel(buffer: ArrayBuffer, contentType: string): boolean {
@@ -97,18 +89,23 @@ export async function fetchExcelFromIntranet(options: {
   from: string;
   to: string;
 }): Promise<ArrayBuffer> {
-  const payload = normalizeSessionPayload(options.sessionInput);
-  if (!payload) {
-    throw new Error("missing_session");
-  }
+  const auth = parseAuthInput(options.sessionInput);
   const urls = candidateExportUrls(options.baseUrl, options.exportApiPath, options.from, options.to);
   let lastError: Error | null = null;
   for (const url of urls) {
     try {
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      };
+      if (auth.kind === "cookie") {
+        headers.Cookie = auth.cookie;
+      }
       const response = await fetch(url, {
-        method: "GET",
+        method: "POST",
         credentials: "include",
-        headers: authHeaders(options.storageKey, payload),
+        headers,
+        body: "",
         cache: "no-store",
       });
       if (!response.ok) {
@@ -116,7 +113,12 @@ export async function fetchExcelFromIntranet(options: {
         continue;
       }
       const buffer = await response.arrayBuffer();
-      if (!looksLikeExcel(buffer, response.headers.get("content-type") ?? "")) {
+      const contentType = response.headers.get("content-type") ?? "";
+      if (looksLikeLoginHtml(buffer, contentType)) {
+        lastError = new Error("need_locker_login");
+        continue;
+      }
+      if (!looksLikeExcel(buffer, contentType)) {
         lastError = new Error("export_not_excel");
         continue;
       }
