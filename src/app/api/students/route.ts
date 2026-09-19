@@ -4,6 +4,18 @@ import { requireUser } from "@/lib/session";
 import { formatHkDateTime, hkToday, parseSchoolPlace, parseUnusedStudentNos } from "@/lib/open-log";
 import { listLockerAssignments } from "@/lib/import-rows";
 
+type StudentListRow = {
+  studentNo: string;
+  classCode: string;
+  studentName: string | null;
+  lastLockerCode: string;
+  assignedLockerCode: string;
+  lastOpenedAt: string | null;
+  lastOpenType: string;
+  unused: boolean;
+  todayOpenCount: number;
+};
+
 export async function GET(request: Request) {
   const session = await requireUser();
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });
@@ -26,7 +38,7 @@ export async function GET(request: Request) {
     _count: { _all: true },
   });
   const countByStudent = new Map(todayCounts.map((row) => [row.studentNo.toUpperCase(), row._count._all]));
-  const byId = new Map(
+  const byId = new Map<string, StudentListRow>(
     rows.map((row) => [
       row.studentNo.toUpperCase(),
       {
