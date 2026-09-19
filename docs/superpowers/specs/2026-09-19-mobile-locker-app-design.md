@@ -1,7 +1,7 @@
 # 手機櫃資訊應用 — 設計規格（已按你的回覆修訂）
 
 > 日期：2026-09-19  
-> 狀態：**規格已按 Q&A 更新；尚有 2 項會影響畫面／匯入，見第 11 節**  
+> 狀態：**規格已按 Q&A 更新；session 格式已對上 sessionStorage；第 11 節仍待確認**  
 > 範圍：校內專用；今期不寫公開雲、不做 Google 登入  
 > 語言：`zh-HK` + `en` 對照；日期 `yyyy-mm-dd`；時間 `HH:mm:ss`；時區 `Asia/Hong_Kong`
 
@@ -50,7 +50,7 @@
 | UI | 專業、多色彩、藍色主色；`next-intl`：`zh-HK` / `en` |
 | DB | PostgreSQL 16 + Prisma |
 | Excel | 解析欄名（簡體，與原廠導出一致） |
-| 同步 | 伺服器端帶 session cookie 呼叫內聯網導出；對不到再考慮 Playwright |
+| 同步 | 設定頁貼上 sessionStorage JSON；校內主機用 Playwright 注入後導出 Excel。純 Cookie 可能不夠，因原廠把值放在 sessionStorage 而非 Set-Cookie |
 | 排程 | 行程內 `node-cron`，`Asia/Hong_Kong`：每日 **09:45**、**18:30** |
 | 認證第一期 | `admin` / `000000`（只存 bcrypt）；第二期 Google 電郵，不做 |
 
@@ -84,7 +84,21 @@
 ## 5. 同步規則
 
 1. **探測** `http://10.127.7.200:17789`（短 timeout）。失敗 → 不寫假成功；畫面中英提示仍可查已存紀錄。
-2. **認證**：設定頁的 session id，請求時放進 Cookie（常見鍵名 `session_id`；實作時用瀏覽器實際 cookie 名，設定頁可改鍵名若需要）。
+2. **認證（你提供的 sessionStorage）**  
+   原廠不是普通 cookie 名稱 `session_id`，而是瀏覽器 **Session Storage**：
+
+   | 項目 | 值 |
+   |------|-----|
+   | 鍵名 | `__tea_session_id_586864` |
+   | 值 | JSON：`{"sessionId":"<uuid>","timestamp":<毫秒>}` |
+
+   設定頁可貼：整段 JSON，或只貼 `sessionId` UUID（系統會補上當前 timestamp）。  
+   **不要把真實 UUID 寫進 Git。** 只存在 `app_settings`。
+
+   同步時校內主機打開 `http://10.127.7.200:17789`，執行  
+   `sessionStorage.setItem('__tea_session_id_586864', json)`，再進入 `#/Logs/OpenLog`、填日期、導出 Excel。
+
+   **風險：** `__tea_session_id_*` 常見於統計 SDK（Tea／Rangers），關分頁或閒置約 30 分鐘就失效，**09:45／18:30 排程可能經常失敗**。若 Local Storage 還有 `token`／`Authorization`／`userInfo` 之類，應一併貼到設定頁，排程才穩。見第 11 節 C。
 3. **日期範圍**
    - 首次：`from = 設定的首次匯入日`，`to = 今天（香港）`。
    - 其後：`from = last_success_open_date`（重疊 1 日），`to = 今天`。
@@ -116,8 +130,10 @@
 | 欄位 | 說明 |
 |------|------|
 | 內聯網網址 | 預設 `http://10.127.7.200:17789` |
-| Session ID | 密碼型輸入；存資料庫（不明文寫進 Git／log）。不在畫面回顯全文，只顯示「已保存」。 |
-| 連線測試 | 用該 session 探測／拉一筆，顯示成功或失效 |
+| Session Storage 鍵名 | 預設 `__tea_session_id_586864`（可改） |
+| Session 內容 | 多行文字框，貼 JSON 或 UUID。存資料庫，不進 Git／log。畫面只顯示「已保存」與 timestamp 日期。 |
+| （可選）登入 Token | 若你從 Local Storage／Cookie 另複製 `token`，貼在這裡作排程用 |
+| 連線測試 | 注入 storage 後嘗試開 OpenLog／導出；成功或提示失效 |
 | 首次匯入日起 | 見第 11 節 |
 | 每櫃格數 | 用於產生 001…N 的空置格；見第 11 節 |
 | 排程說明 | 只讀：每日 09:45、18:30 |
@@ -165,7 +181,7 @@ Google 登入、校外存取、遙距開箱、學生自助、推播、改原廠 
 
 ### 7.2 `app_settings`（單列）
 
-`intranet_base_url`，`session_id`（敏感），`session_cookie_name` 預設 `session_id`，`first_import_date`，`doors_per_cabinet`，`updated_at`。
+`intranet_base_url`，`session_storage_key` 預設 `__tea_session_id_586864`，`session_payload`（敏感 JSON），`login_token`（可空、敏感），`first_import_date`，`doors_per_cabinet`，`updated_at`。
 
 ### 7.3 `sync_state`（單列）
 
@@ -235,6 +251,15 @@ Excel 例子是 `B-032号箱`。畫面要為沒有紀錄的格顯示「空置」
 請回覆一個數字，例如 `40`、`50`、`60`。若 A–G 格數不同，請列出（如 A=40、B=32）。
 
 **順便確認（一句即可）：** 本系統是裝在 **與 `:17789` 同一部** Windows（用 `:3000`），還是 **另一部** 校內 Windows？
+
+**C. 請再看 Local Storage 與 Cookie（很重要）**  
+請在同一網頁 DevTools → Application：
+
+1. **Local Storage**（`http://10.127.7.200:17789`）所有鍵名列出來，尤其 `token`、`access_token`、`user`、`userInfo`、`vuex`。有值的鍵請複製（可遮中間幾位）。
+2. **Cookies** 有沒有 `token`、`JSESSIONID`、`Authorization`。
+3. Network 開 OpenLog 時，請求 Header 有沒有 `Authorization` 或自訂 header。
+
+若只有 `__tea_session_id_586864`，本系統仍會按你的格式注入；但自動排程可能要你每天重貼一次。
 
 ---
 
