@@ -9,6 +9,48 @@ export function doorTone(lastOpenedAt: string | null | undefined, today: string)
   if (!lastOpenedAt) return "vacant";
   return lastOpenedAt.slice(0, 10) === today ? "usedToday" : "occupied";
 }
+
+export type SchoolPlace = {
+  form: string;
+  classLetter: string;
+  classGroup: string;
+  classNo: number;
+};
+
+const OTHER_PLACE: SchoolPlace = { form: "", classLetter: "", classGroup: "", classNo: 0 };
+
+export function parseSchoolPlace(studentNo: string, classCode = ""): SchoolPlace {
+  const id = studentNo.trim().toUpperCase();
+  const fromId = id.match(/^(\d{1,2})([A-Z])(\d{1,3})$/);
+  if (fromId) {
+    return {
+      form: fromId[1],
+      classLetter: fromId[2],
+      classGroup: `${fromId[1]}${fromId[2]}`,
+      classNo: Number(fromId[3]),
+    };
+  }
+  const fromClass = classCode.trim().toUpperCase().match(/^(\d{1,2})([A-Z])$/);
+  if (fromClass) {
+    const digits = id.match(/(\d{1,3})$/);
+    return {
+      form: fromClass[1],
+      classLetter: fromClass[2],
+      classGroup: `${fromClass[1]}${fromClass[2]}`,
+      classNo: digits ? Number(digits[1]) : 0,
+    };
+  }
+  return OTHER_PLACE;
+}
+
+export function compareSchoolPlace(a: SchoolPlace, b: SchoolPlace): number {
+  const formA = a.form ? Number(a.form) : 99;
+  const formB = b.form ? Number(b.form) : 99;
+  if (formA !== formB) return formA - formB;
+  if (a.classLetter !== b.classLetter) return a.classLetter.localeCompare(b.classLetter);
+  if (a.classNo !== b.classNo) return a.classNo - b.classNo;
+  return 0;
+}
 export type Cabinet = (typeof CABINETS)[number];
 
 export type ParsedLocker = {

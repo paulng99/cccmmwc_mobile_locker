@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { fetchExcelFromIntranet, probeIntranet } from "@/lib/intranet";
+import { formatHkDateTime } from "@/lib/open-log";
 
 type Settings = {
   intranetBaseUrl: string;
@@ -51,8 +52,7 @@ export function UpdateBar() {
     const imported = await fetch("/api/import", { method: "POST", body: form });
     const result = (await imported.json()) as { ok?: boolean; inserted?: number; error?: string };
     if (!imported.ok) throw new Error(result.error ?? "import_failed");
-    setMessage(result.inserted ? t("updateOk", { count: result.inserted }) : t("updateNone"));
-    await load();
+    window.location.reload();
   }
 
   async function update() {
@@ -89,8 +89,7 @@ export function UpdateBar() {
         setError(failMessage(result.error));
         setMessage(null);
       } else {
-        setMessage(result.inserted ? t("updateOk", { count: result.inserted }) : t("updateNone"));
-        await load();
+        window.location.reload();
       }
     } catch {
       setError(reachable ? t("proxyFail") : t("intranetFail"));
@@ -130,7 +129,7 @@ export function UpdateBar() {
           {t("dateRange")}: {settings ? `${settings.from} → ${settings.to}` : "…"}
         </span>
         <span>
-          {t("lastSync")}: {settings?.lastSuccessAt ? settings.lastSuccessAt.slice(0, 19).replace("T", " ") : t("never")}
+          {t("lastSync")}: {settings?.lastSuccessAt ? `${formatHkDateTime(new Date(settings.lastSuccessAt))} HKT` : t("never")}
         </span>
         <button className="primary" type="button" onClick={update} disabled={busy}>
           {busy ? t("updating") : t("update")}

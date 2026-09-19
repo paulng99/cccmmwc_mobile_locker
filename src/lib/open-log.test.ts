@@ -9,6 +9,8 @@ import {
   formatHkDate,
   overlapFromDate,
   doorTone,
+  parseSchoolPlace,
+  compareSchoolPlace,
 } from "./open-log.ts";
 
 describe("parseLockerDoor", () => {
@@ -87,6 +89,42 @@ describe("parseDataRow", () => {
 describe("overlapFromDate", () => {
   it("uses first import date when never synced", () => {
     assert.equal(overlapFromDate(null, "2025-09-01"), "2025-09-01");
+  });
+});
+
+describe("parseSchoolPlace", () => {
+  it("reads form, class and number from 1A33", () => {
+    assert.deepEqual(parseSchoolPlace("1A33", "學生"), {
+      form: "1",
+      classLetter: "A",
+      classGroup: "1A",
+      classNo: 33,
+    });
+  });
+
+  it("reads 6D08", () => {
+    const parsed = parseSchoolPlace("6D08", "");
+    assert.equal(parsed.form, "6");
+    assert.equal(parsed.classLetter, "D");
+    assert.equal(parsed.classNo, 8);
+  });
+
+  it("falls back to classCode 2B", () => {
+    assert.deepEqual(parseSchoolPlace("12", "2B"), {
+      form: "2",
+      classLetter: "B",
+      classGroup: "2B",
+      classNo: 12,
+    });
+  });
+
+  it("sorts by form, class, then number", () => {
+    const rows = ["2A03", "1C10", "1A02", "1A10"].map((id) => parseSchoolPlace(id, ""));
+    rows.sort(compareSchoolPlace);
+    assert.deepEqual(
+      rows.map((row) => `${row.classGroup}${String(row.classNo).padStart(2, "0")}`),
+      ["1A02", "1A10", "1C10", "2A03"],
+    );
   });
 });
 
