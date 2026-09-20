@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, readUnusedStudentNos } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { formatHkDateTime, hkToday, parseSchoolPlace, parseUnusedStudentNos } from "@/lib/open-log";
+import { formatHkDateTime, firstImportStart, hkToday, openedOnOrAfter, parseSchoolPlace, parseUnusedStudentNos } from "@/lib/open-log";
 import { listLockerAssignments } from "@/lib/import-rows";
 
 type StudentListRow = {
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") ?? "").trim().toLowerCase();
-  const [rows, assignments] = await Promise.all([
+  const [rows, assignments, settings] = await Promise.all([
     prisma.studentCurrent.findMany({
       orderBy: [{ classCode: "asc" }, { studentNo: "asc" }],
     }),
@@ -30,30 +30,31 @@ export async function GET(request: Request) {
   ]);
   const unused = new Set(parseUnusedStudentNos(await readUnusedStudentNos()));
   const today = hkToday();
+  const since = firstImportStart(settings.firstImportDate);
   const start = new Date(`${today}T00:00:00+08:00`);
   const end = new Date(`${today}T23:59:59.999+08:00`);
+  const countFrom = start > since ? start : since;
   const todayCounts = await prisma.openEvent.groupBy({
     by: ["studentNo"],
-    where: { openedAt: { gte: start, lte: end } },
+    where: { openedAt: { gte: countFrom, lte: end } },
     _count: { _all: true },
   });
   const countByStudent = new Map(todayCounts.map((row) => [row.studentNo.toUpperCase(), row._count._all]));
-  const byId = new Map<string, StudentListRow>(
-    rows.map((row) => [
-      row.studentNo.toUpperCase(),
-      {
-        studentNo: row.studentNo,
-        classCode: row.classCode,
-        studentName: row.studentName,
-        lastLockerCode: row.lastLockerCode,
-        assignedLockerCode: "",
-        lastOpenedAt: formatHkDateTime(row.lastOpenedAt),
-        lastOpenType: row.lastOpenType,
-        unused: unused.has(row.studentNo.toUpperCase()),
-        todayOpenCount: countByStudent.get(row.studentNo.toUpperCase()) ?? 0,
-      },
-    ]),
-  );
+  const byId = new Map<string, StudentListRow>();
+  for (const row of rows) {
+    if (!openedOnOrAfter(row.lastOpenedAt, settings.firstImportDate)) continue;
+    byId.set(row.studentNo.toUpperCase(), {
+      studentNo: row.studentNo,
+      classCode: row.classCode,
+      studentName: row.studentName,
+      lastLockerCode: row.lastLockerCode,
+      assignedLockerCode: "",
+      lastOpenedAt: formatHkDateTime(row.lastOpenedAt),
+      lastOpenType: row.lastOpenType,
+      unused: unused.has(row.studentNo.toUpperCase()),
+      todayOpenCount: countByStudent.get(row.studentNo.toUpperCase()) ?? 0,
+    });
+  }
   for (const assignment of assignments) {
     const id = assignment.studentNo.toUpperCase();
     const current = byId.get(id);

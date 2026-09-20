@@ -332,3 +332,14 @@ export function overlapFromDate(lastSuccessOpenDate: string | null, firstImportD
   if (!lastSuccessOpenDate) return firstImportDate;
   return lastSuccessOpenDate;
 }
+
+export function firstImportStart(firstImportDate: string): Date {
+  const match = firstImportDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const day = match ? `${match[1]}-${match[2]}-${match[3]}` : "2025-09-01";
+  return new Date(`${day}T00:00:00+08:00`);
+}
+
+export function openedOnOrAfter(openedAt: Date | null | undefined, firstImportDate: string): boolean {
+  if (!openedAt || Number.isNaN(openedAt.getTime())) return false;
+  return openedAt.getTime() >= firstImportStart(firstImportDate).getTime();
+}

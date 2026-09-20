@@ -8,6 +8,7 @@ import {
   mapHeaderRow,
   formatHkDate,
   overlapFromDate,
+  openedOnOrAfter,
   doorTone,
   parseSchoolPlace,
   compareSchoolPlace,
@@ -92,6 +93,16 @@ describe("parseDataRow", () => {
 describe("overlapFromDate", () => {
   it("uses first import date when never synced", () => {
     assert.equal(overlapFromDate(null, "2025-09-01"), "2025-09-01");
+  });
+});
+
+describe("openedOnOrAfter", () => {
+  it("keeps opens on the first import date and drops earlier ones", () => {
+    const onDay = new Date("2026-09-01T00:00:00+08:00");
+    const before = new Date("2026-08-31T23:59:59+08:00");
+    assert.equal(openedOnOrAfter(onDay, "2026-09-01"), true);
+    assert.equal(openedOnOrAfter(before, "2026-09-01"), false);
+    assert.equal(openedOnOrAfter(null, "2026-09-01"), false);
   });
 });
 

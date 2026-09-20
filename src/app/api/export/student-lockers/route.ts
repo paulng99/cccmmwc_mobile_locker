@@ -5,6 +5,7 @@ import {
   compareSchoolPlace,
   formatHkDate,
   formatHkDateTime,
+  openedOnOrAfter,
   parseSchoolPlace,
   parseUnusedStudentNos,
 } from "@/lib/open-log";
@@ -35,20 +36,25 @@ export async function GET(request: Request) {
 
   const unused = new Set(parseUnusedStudentNos(unusedText));
   const lockerRows: LockerStudentRow[] = buildLockerRows(
-    occupied.map((row) => ({
-      lockerCode: row.lockerCode,
-      cabinet: row.cabinet,
-      doorNo: row.doorNo,
-      studentNo: row.studentNo,
-      classCode: row.classCode,
-      studentName: row.studentName,
-      lastOpenedAt: row.lastOpenedAt ? formatHkDateTime(row.lastOpenedAt) : null,
-    })),
+    occupied.flatMap((row) =>
+      openedOnOrAfter(row.lastOpenedAt, settings.firstImportDate)
+        ? [{
+            lockerCode: row.lockerCode,
+            cabinet: row.cabinet,
+            doorNo: row.doorNo,
+            studentNo: row.studentNo,
+            classCode: row.classCode,
+            studentName: row.studentName,
+            lastOpenedAt: row.lastOpenedAt ? formatHkDateTime(row.lastOpenedAt) : null,
+          }]
+        : [],
+    ),
     settings.doorsPerCabinet,
   );
 
   const byId = new Map<string, StudentLockerRow>();
   for (const row of students) {
+    if (!openedOnOrAfter(row.lastOpenedAt, settings.firstImportDate)) continue;
     byId.set(row.studentNo.toUpperCase(), {
       studentNo: row.studentNo,
       classCode: row.classCode,

@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { formatHkDate, type FrpUserRow, type OpenLogRow, rowFingerprint } from "./open-log";
+import { firstImportStart, formatHkDate, type FrpUserRow, type OpenLogRow, rowFingerprint } from "./open-log";
 
 export async function importOpenLogRows(rows: OpenLogRow[], source: string) {
   let inserted = 0;
@@ -130,6 +130,8 @@ export async function listLockerAssignments(cabinet?: string): Promise<LockerAss
 }
 
 export async function recomputeCurrentState() {
+  const settings = await prisma.appSettings.findUnique({ where: { id: 1 } });
+  const since = firstImportStart(settings?.firstImportDate ?? "2025-09-01");
   const latestStudents = await prisma.$queryRaw<
     {
       student_no: string;
@@ -150,6 +152,7 @@ export async function recomputeCurrentState() {
       open_type AS last_open_type,
       id AS last_event_id
     FROM open_events
+    WHERE opened_at >= ${since}
     ORDER BY student_no, opened_at DESC, id DESC
   `;
 
@@ -192,6 +195,7 @@ export async function recomputeCurrentState() {
       open_type AS last_open_type,
       id AS last_event_id
     FROM open_events
+    WHERE opened_at >= ${since}
     ORDER BY locker_code, opened_at DESC, id DESC
   `;
 

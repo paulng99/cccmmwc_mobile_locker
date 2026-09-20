@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { formatHkDateTime } from "@/lib/open-log";
+import { firstImportStart, formatHkDateTime } from "@/lib/open-log";
 
 export async function GET(request: Request) {
   const session = await requireUser();
@@ -9,8 +9,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const studentNo = searchParams.get("studentNo");
   const lockerCode = searchParams.get("lockerCode");
+  const settings = await prisma.appSettings.findUnique({ where: { id: 1 } });
+  const since = firstImportStart(settings?.firstImportDate ?? "2025-09-01");
   const rows = await prisma.openEvent.findMany({
     where: {
+      openedAt: { gte: since },
       ...(studentNo ? { studentNo } : {}),
       ...(lockerCode ? { lockerCode } : {}),
     },

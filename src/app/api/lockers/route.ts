@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, readUnusedStudentNos } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { CABINETS, LOCKER_GRID_SIZE, formatHkDateTime, parseUnusedStudentNos } from "@/lib/open-log";
+import { CABINETS, LOCKER_GRID_SIZE, formatHkDateTime, openedOnOrAfter, parseUnusedStudentNos } from "@/lib/open-log";
 import { listLockerAssignments } from "@/lib/import-rows";
 
 export async function GET(request: Request) {
@@ -12,10 +12,11 @@ export async function GET(request: Request) {
   if (!CABINETS.includes(cabinet as (typeof CABINETS)[number])) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  const [occupied, assigned, unusedText] = await Promise.all([
+  const [occupied, assigned, unusedText, settings] = await Promise.all([
     prisma.lockerCurrent.findMany({ where: { cabinet } }),
     listLockerAssignments(cabinet),
     readUnusedStudentNos(),
+    prisma.appSettings.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }),
   ]);
   const unused = new Set(parseUnusedStudentNos(unusedText));
   const byDoor = new Map(occupied.map((row) => [row.doorNo, row]));
@@ -26,19 +27,20 @@ export async function GET(request: Request) {
   const doors = Array.from({ length: doorCount }, (_, index) => {
     const doorNo = String(index + 1).padStart(3, "0");
     const current = byDoor.get(doorNo);
+    const recent = current && openedOnOrAfter(current.lastOpenedAt, settings.firstImportDate) ? current : undefined;
     const link = byAssigned.get(doorNo);
-    const studentNo = link?.studentNo ?? current?.studentNo ?? null;
+    const studentNo = link?.studentNo ?? recent?.studentNo ?? null;
     return {
       lockerCode: `${cabinet}-${doorNo}`,
       doorNo,
       assigned: Boolean(link?.studentNo),
       unused: Boolean(studentNo && unused.has(studentNo.toUpperCase())),
-      vacant: !link?.studentNo && !current?.lastOpenedAt,
+      vacant: !link?.studentNo && !recent?.lastOpenedAt,
       studentNo,
-      classCode: link?.classCode ?? current?.classCode ?? null,
-      studentName: link?.studentName ?? current?.studentName ?? null,
-      lastOpenedAt: current?.lastOpenedAt ? formatHkDateTime(current.lastOpenedAt) : null,
-      lastOpenType: current?.lastOpenType ?? null,
+      classCode: link?.classCode ?? recent?.classCode ?? null,
+      studentName: link?.studentName ?? recent?.studentName ?? null,
+      lastOpenedAt: recent?.lastOpenedAt ? formatHkDateTime(recent.lastOpenedAt) : null,
+      lastOpenType: recent?.lastOpenType ?? null,
     };
   });
   return NextResponse.json({ cabinet, doors });

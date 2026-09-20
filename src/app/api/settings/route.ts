@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma, readUnusedStudentNos, writeUnusedStudentNos } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { overlapFromDate, hkToday } from "@/lib/open-log";
+import { recomputeCurrentState } from "@/lib/import-rows";
 
 export async function GET() {
   const session = await requireUser();
@@ -55,6 +56,9 @@ export async function PUT(request: Request) {
   });
   if (body.unusedStudentNos !== undefined) {
     await writeUnusedStudentNos(body.unusedStudentNos);
+  }
+  if (body.firstImportDate !== undefined) {
+    await recomputeCurrentState();
   }
   return NextResponse.json({
     ok: true,
