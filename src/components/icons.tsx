@@ -8,6 +8,17 @@ export function YesIcon({ label }: { label: string }) {
   );
 }
 
+export function CrossIcon({ label }: { label: string }) {
+  return (
+    <span className="icon-cross" title={label} aria-label={label}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 8 16 16" />
+        <path d="M16 8 8 16" />
+      </svg>
+    </span>
+  );
+}
+
 export function HistoryIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">

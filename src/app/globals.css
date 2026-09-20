@@ -189,6 +189,11 @@ button, input, select { font: inherit; }
   border-color: rgba(148, 163, 184, 0.55);
   color: #64748b;
 }
+.door.unused {
+  background: rgba(248, 113, 113, 0.28);
+  border-color: rgba(248, 113, 113, 0.55);
+  color: #0f172a;
+}
 .door .no { font-weight: 800; color: #1d4ed8; }
 .door-name { font-weight: 700; }
 .door-meta { font-size: 12px; line-height: 1.35; }
@@ -209,6 +214,28 @@ button, input, select { font: inherit; }
   height: 16px;
 }
 .icon-yes path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon-cross {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f87171, #dc2626);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.28);
+}
+.icon-cross svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.icon-cross path {
   fill: none;
   stroke: #fff;
   stroke-width: 2.8;

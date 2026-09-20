@@ -11,6 +11,7 @@ type Door = {
   doorNo: string;
   vacant: boolean;
   assigned: boolean;
+  unused: boolean;
   studentName: string | null;
   studentNo: string | null;
   classCode: string | null;
@@ -50,7 +51,7 @@ export function LockerGrid() {
           const tone = doorTone(door.lastOpenedAt, today, door.assigned);
           const look = door.lastOpenedAt ? tone : "vacant";
           return (
-            <article key={door.lockerCode} className={`door ${look}`}>
+            <article key={door.lockerCode} className={`door ${look}${door.unused ? " unused" : ""}`}>
               <div className="no">{door.doorNo}</div>
               {tone === "vacant" ? (
                 <div className="door-meta">{t("vacant")}</div>
