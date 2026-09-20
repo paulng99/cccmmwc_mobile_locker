@@ -103,18 +103,43 @@ button, input, select { font: inherit; }
   cursor: pointer;
 }
 
-.search { width: min(420px, 100%); padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 12px; }
-.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
-.filters button {
+.student-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.student-toolbar .search,
+.student-toolbar select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
   border: 1px solid #bfdbfe;
+  border-radius: 12px;
   background: white;
+  color: #0f172a;
+}
+.usage-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 0;
+}
+.usage-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
   color: #1e3a8a;
-  border-radius: 999px;
-  padding: 7px 12px;
+  border-radius: 12px;
+  padding: 8px 12px;
   font-weight: 700;
   cursor: pointer;
 }
-.filters button.active { background: #2563eb; border-color: #2563eb; color: white; }
+.usage-filters label.active { background: #dbeafe; border-color: #2563eb; }
+.usage-filters input { width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; }
 .student-group { margin-top: 18px; overflow-x: auto; }
 .student-group h2 {
   display: flex;

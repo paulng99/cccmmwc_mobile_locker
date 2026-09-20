@@ -67,6 +67,8 @@
   "unusedHint": "One student number per line, e.g. 1C02. These students are shown in light red.",
   "unused": "Not using",
   "todayOnce": "Opened once today",
+  "noUseToday": "Students who did not use a locker today",
+  "openedOnceToday": "Students who opened a locker only once",
   "yes": "Yes",
   "exportMapping": "Student–locker mapping",
   "exportMappingHint": "On 智能柜, open Users, click 导出Excel, then import the file here. Automatic download is also available.",

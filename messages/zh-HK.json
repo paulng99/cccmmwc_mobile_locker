@@ -67,6 +67,8 @@
   "unusedHint": "每行一個學號，例如 1C02。這些學生會以淺紅顯示。",
   "unused": "不使用",
   "todayOnce": "當天只開1次",
+  "noUseToday": "當天沒有使用手機櫃的學生",
+  "openedOnceToday": "只打開了1次手機櫃的學生",
   "yes": "是",
   "exportMapping": "學生與箱門關係",
   "exportMappingHint": "喺智能柜「用戶管理」撳「导出Excel」，再喺呢度導入。亦可自動下載後導入。",

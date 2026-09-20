@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { CrossIcon, HistoryIcon, YesIcon } from "@/components/icons";
-import { compareSchoolPlace, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
+import { compareSchoolPlace, matchesStudentUsageFilter, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
 
 type Row = {
   studentNo: string;
@@ -27,6 +27,8 @@ export function StudentTable() {
   const [klass, setKlass] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("studentNo");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [noUseToday, setNoUseToday] = useState(false);
+  const [openedOnce, setOpenedOnce] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function StudentTable() {
     const filtered = placed.filter((row) => {
       if (form !== "all" && row.form !== form) return false;
       if (klass !== "all" && row.classGroup !== klass) return false;
-      return true;
+      return matchesStudentUsageFilter(row, { noUseToday, openedOnce });
     });
     const dir = sortDir === "asc" ? 1 : -1;
     return filtered.sort((a, b) => {
@@ -97,7 +99,7 @@ export function StudentTable() {
       if (text !== 0) return text * dir;
       return bySchool;
     });
-  }, [placed, form, klass, sortKey, sortDir]);
+  }, [placed, form, klass, sortKey, sortDir, noUseToday, openedOnce]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Placed[]>();
@@ -137,40 +139,59 @@ export function StudentTable() {
 
   return (
     <section className="card">
-      <input className="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search")} />
-      <div className="filters">
-        <button type="button" className={form === "all" ? "active" : ""} onClick={() => { setForm("all"); setKlass("all"); }}>
-          {t("allForms")}
-        </button>
-        {forms.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={form === id ? "active" : ""}
-            onClick={() => { setForm(id); setKlass("all"); }}
-          >
-            {t("formGrade", { id })}
-          </button>
-        ))}
+      <div className="student-toolbar">
+        <input className="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search")} aria-label={t("search")} />
+        <select
+          aria-label={t("form")}
+          value={form}
+          onChange={(e) => {
+            setForm(e.target.value);
+            setKlass("all");
+          }}
+        >
+          <option value="all">{t("allForms")}</option>
+          {forms.map((id) => (
+            <option key={id} value={id}>
+              {t("formGrade", { id })}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={t("class")}
+          value={klass}
+          onChange={(e) => {
+            const id = e.target.value;
+            setKlass(id);
+            if (id === "all") return;
+            const parsed = parseSchoolPlace(`${id}01`, id);
+            if (parsed.form) setForm(parsed.form);
+          }}
+        >
+          <option value="all">{t("allClasses")}</option>
+          {classes.map((id) => (
+            <option key={id} value={id}>
+              {t("classGroup", { id })}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="filters">
-        <button type="button" className={klass === "all" ? "active" : ""} onClick={() => setKlass("all")}>
-          {t("allClasses")}
-        </button>
-        {classes.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={klass === id ? "active" : ""}
-            onClick={() => {
-              setKlass(id);
-              const parsed = parseSchoolPlace(`${id}01`, id);
-              if (parsed.form) setForm(parsed.form);
-            }}
-          >
-            {t("classGroup", { id })}
-          </button>
-        ))}
+      <div className="usage-filters">
+        <label className={noUseToday ? "active" : ""}>
+          <input
+            type="checkbox"
+            checked={noUseToday}
+            onChange={(e) => setNoUseToday(e.target.checked)}
+          />
+          {t("noUseToday")}
+        </label>
+        <label className={openedOnce ? "active" : ""}>
+          <input
+            type="checkbox"
+            checked={openedOnce}
+            onChange={(e) => setOpenedOnce(e.target.checked)}
+          />
+          {t("openedOnceToday")}
+        </label>
       </div>
       {groups.length === 0 ? (
         <p className="hint">{t("noRows")}</p>

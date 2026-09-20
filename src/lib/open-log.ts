@@ -21,6 +21,18 @@ export function studentRowTone(options: { unused: boolean; todayOpenCount: numbe
   return "idleToday";
 }
 
+export function matchesStudentUsageFilter(
+  row: { unused: boolean; todayOpenCount: number },
+  filter: { noUseToday: boolean; openedOnce: boolean },
+): boolean {
+  if (!filter.noUseToday && !filter.openedOnce) return true;
+  const idleToday = !row.unused && row.todayOpenCount === 0;
+  const openedOnce = row.todayOpenCount === 1;
+  if (filter.noUseToday && idleToday) return true;
+  if (filter.openedOnce && openedOnce) return true;
+  return false;
+}
+
 export function doorTone(
   lastOpenedAt: string | null | undefined,
   today: string,

@@ -13,6 +13,7 @@ import {
   compareSchoolPlace,
   parseUnusedStudentNos,
   studentRowTone,
+  matchesStudentUsageFilter,
 } from "./open-log.ts";
 
 describe("parseLockerDoor", () => {
@@ -151,6 +152,39 @@ describe("studentRowTone", () => {
 
   it("marks no open today as green when not unused", () => {
     assert.equal(studentRowTone({ unused: false, todayOpenCount: 0 }), "idleToday");
+  });
+});
+
+describe("matchesStudentUsageFilter", () => {
+  const idle = { unused: false, todayOpenCount: 0 };
+  const once = { unused: false, todayOpenCount: 1 };
+  const twice = { unused: false, todayOpenCount: 2 };
+  const exempt = { unused: true, todayOpenCount: 0 };
+
+  it("shows everyone when no checkbox is on", () => {
+    const filter = { noUseToday: false, openedOnce: false };
+    assert.equal(matchesStudentUsageFilter(idle, filter), true);
+    assert.equal(matchesStudentUsageFilter(twice, filter), true);
+  });
+
+  it("keeps students who did not use a locker today, excluding the not-using list", () => {
+    const filter = { noUseToday: true, openedOnce: false };
+    assert.equal(matchesStudentUsageFilter(idle, filter), true);
+    assert.equal(matchesStudentUsageFilter(exempt, filter), false);
+    assert.equal(matchesStudentUsageFilter(once, filter), false);
+  });
+
+  it("keeps students who opened a locker only once", () => {
+    const filter = { noUseToday: false, openedOnce: true };
+    assert.equal(matchesStudentUsageFilter(once, filter), true);
+    assert.equal(matchesStudentUsageFilter(twice, filter), false);
+  });
+
+  it("unions both lists when both checkboxes are on", () => {
+    const filter = { noUseToday: true, openedOnce: true };
+    assert.equal(matchesStudentUsageFilter(idle, filter), true);
+    assert.equal(matchesStudentUsageFilter(once, filter), true);
+    assert.equal(matchesStudentUsageFilter(twice, filter), false);
   });
 });
 
