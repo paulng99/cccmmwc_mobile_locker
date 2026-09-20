@@ -51,6 +51,8 @@
   "noRows": "No records",
   "updateOk": "Imported {count} new rows.",
   "updateNone": "Update finished. No new rows.",
+  "syncPopupTitle": "Update complete",
+  "syncPopupDetail": "New rows: {inserted}. Rows in file: {total}. Skipped: {skipped}.",
   "missingSession": "Sign in to 智能柜 on this computer, or upload the exported Excel.",
   "needLockerLogin": "The locker system asked for login. Open 智能柜, export Excel, then upload the file here.",
   "corsFail": "The locker page blocked the browser (CORS). Retrying via the school server…",

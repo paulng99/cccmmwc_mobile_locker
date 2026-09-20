@@ -51,6 +51,8 @@
   "noRows": "沒有紀錄",
   "updateOk": "已匯入 {count} 筆新紀錄。",
   "updateNone": "更新完成，沒有新紀錄。",
+  "syncPopupTitle": "更新完成",
+  "syncPopupDetail": "新紀錄：{inserted} 筆。檔案共 {total} 筆。略過 {skipped} 筆。",
   "missingSession": "請先在呢部電腦登入智能柜，或上傳已導出的 Excel。",
   "needLockerLogin": "手機櫃系統要求重新登入。請打開智能柜，撳「导出Excel」，再喺呢度上傳檔案。",
   "corsFail": "原廠頁擋住瀏覽器跨來源讀取（CORS）。改由校內伺服器轉發…",

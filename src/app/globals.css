@@ -258,6 +258,51 @@ button, input, select { font: inherit; }
 }
 .alert { background: #fee2e2; color: #991b1b; padding: 10px 12px; border-radius: 12px; }
 .okmsg { background: #dbeafe; color: #1e3a8a; padding: 10px 12px; border-radius: 12px; }
+.sync-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.28);
+}
+.sync-popup {
+  position: relative;
+  width: min(420px, 100%);
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  border-radius: 16px;
+  padding: 18px 18px 20px;
+  box-shadow: 0 18px 40px rgba(11, 59, 140, 0.22);
+}
+.sync-popup h2 {
+  margin: 0 0 8px;
+  color: #0b3b8c;
+  font-size: 18px;
+}
+.sync-popup p { margin: 0; }
+.sync-popup .file {
+  margin-bottom: 6px;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.sync-popup .bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, #38bdf8, #2563eb);
+  transform-origin: left center;
+  animation: sync-popup-bar 3s linear forwards;
+}
+@keyframes sync-popup-bar {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
 
 @media (max-width: 700px) {
   .topbar { align-items: flex-start; flex-direction: column; }

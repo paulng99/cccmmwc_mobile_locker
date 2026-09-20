@@ -17,6 +17,33 @@ type Settings = {
   lastSuccessAt: string | null;
 };
 
+type ImportResult = {
+  ok?: boolean;
+  inserted?: number;
+  total?: number;
+  skipped?: number;
+  error?: string;
+};
+
+type SyncNotice = {
+  filename: string;
+  inserted: number;
+  total: number;
+  skipped: number;
+};
+
+const SYNC_NOTICE_KEY = "locker-sync-notice";
+
+function stashNotice(result: ImportResult, filename: string) {
+  const notice: SyncNotice = {
+    filename,
+    inserted: result.inserted ?? 0,
+    total: result.total ?? 0,
+    skipped: result.skipped ?? 0,
+  };
+  sessionStorage.setItem(SYNC_NOTICE_KEY, JSON.stringify(notice));
+}
+
 export function UpdateBar() {
   const t = useTranslations();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -25,6 +52,7 @@ export function UpdateBar() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<SyncNotice | null>(null);
 
   async function load() {
     const response = await fetch("/api/settings");
@@ -41,6 +69,19 @@ export function UpdateBar() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem(SYNC_NOTICE_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(SYNC_NOTICE_KEY);
+    try {
+      setNotice(JSON.parse(raw) as SyncNotice);
+    } catch {
+      return;
+    }
+    const timer = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   function failMessage(code?: string) {
     if (code === "missing_session") return t("missingSession");
     if (code === "need_locker_login") return t("needLockerLogin");
@@ -51,8 +92,9 @@ export function UpdateBar() {
     const form = new FormData();
     form.append("file", file, filename);
     const imported = await fetch("/api/import", { method: "POST", body: form });
-    const result = (await imported.json()) as { ok?: boolean; inserted?: number; error?: string };
+    const result = (await imported.json()) as ImportResult;
     if (!imported.ok) throw new Error(result.error ?? "import_failed");
+    stashNotice(result, filename);
     window.location.reload();
   }
 
@@ -85,11 +127,12 @@ export function UpdateBar() {
     }
     try {
       const proxy = await fetch("/api/sync/proxy", { method: "POST" });
-      const result = (await proxy.json()) as { ok?: boolean; inserted?: number; error?: string };
+      const result = (await proxy.json()) as ImportResult;
       if (!proxy.ok) {
         setError(failMessage(result.error));
         setMessage(null);
       } else {
+        stashNotice(result, "openlog.xlsx");
         window.location.reload();
       }
     } catch {
@@ -148,6 +191,22 @@ export function UpdateBar() {
       </p>
       {message ? <p className="okmsg">{message}</p> : null}
       {error ? <p className="alert">{error}</p> : null}
+      {notice ? (
+        <div className="sync-popup-backdrop">
+          <div className="sync-popup" role="status" aria-live="polite">
+            <h2>{t("syncPopupTitle")}</h2>
+            <p className="file">{notice.filename}</p>
+            <p>
+              {t("syncPopupDetail", {
+                inserted: notice.inserted,
+                total: notice.total,
+                skipped: notice.skipped,
+              })}
+            </p>
+            <div className="bar" />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
