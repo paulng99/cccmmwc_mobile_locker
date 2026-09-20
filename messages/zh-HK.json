@@ -13,7 +13,7 @@
   "update": "更新",
   "updating": "更新中…",
   "form": "級",
-  "formGrade": "中{id}級",
+  "formGrade": "{id} 級",
   "classGroup": "{id} 班",
   "allForms": "全部級",
   "allClasses": "全部班",
