@@ -55,17 +55,39 @@ export function parseAuthInput(input: string): AuthInput {
   return { kind: "none" };
 }
 
+function withDayBound(value: string, bound: "start" | "end"): string {
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return bound === "start" ? `${trimmed} 00:00:00` : `${trimmed} 23:59:59`;
+  }
+  return trimmed;
+}
+
 export function exportQuery(from: string, to: string): string {
+  const start = withDayBound(from, "start");
+  const end = withDayBound(to, "end");
   const params = new URLSearchParams({
-    startTime: `${from} 00:00:00`,
-    endTime: `${to} 23:59:59`,
-    beginTime: `${from} 00:00:00`,
-    start: from,
-    end: to,
-    from,
-    to,
-    startDate: from,
-    endDate: to,
+    startTime: start,
+    endTime: end,
+    beginTime: start,
+    start,
+    end,
+    from: start,
+    to: end,
+    startDate: start,
+    endDate: end,
+    "Searcher.OpenDate": `${start} ~ ${end}`,
+    "Searcher.StartTime": start,
+    "Searcher.EndTime": end,
+    "Searcher.startTime": start,
+    "Searcher.endTime": end,
+    "Searcher.OpenTime": `${start} ~ ${end}`,
+    OpenTime: `${start} ~ ${end}`,
+    "OpenTime[0]": start,
+    "OpenTime[1]": end,
+    "Searcher.OpenTime[0]": start,
+    "Searcher.OpenTime[1]": end,
   });
   return params.toString();
 }
@@ -127,6 +149,7 @@ export async function fetchExcelFromIntranet(options: {
   return fetchExcelFromUrls(
     candidateExportUrls(options.baseUrl, options.exportApiPath, options.from, options.to),
     options.sessionInput,
+    exportQuery(options.from, options.to),
   );
 }
 
@@ -137,7 +160,7 @@ export async function fetchFrpUserExcelFromIntranet(options: {
   return fetchExcelFromUrls(candidateFrpUserExportUrls(options.baseUrl), options.sessionInput);
 }
 
-async function fetchExcelFromUrls(urls: string[], sessionInput: string): Promise<ArrayBuffer> {
+async function fetchExcelFromUrls(urls: string[], sessionInput: string, body = ""): Promise<ArrayBuffer> {
   const auth = parseAuthInput(sessionInput);
   let lastError: Error | null = null;
   for (const url of urls) {
@@ -155,7 +178,7 @@ async function fetchExcelFromUrls(urls: string[], sessionInput: string): Promise
         method: "POST",
         credentials: "include",
         headers,
-        body: "",
+        body,
         cache: "no-store",
         signal: controller.signal,
       }).finally(() => clearTimeout(timer));

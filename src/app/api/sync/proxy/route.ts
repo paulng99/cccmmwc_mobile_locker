@@ -4,9 +4,13 @@ import { requireUser } from "@/lib/session";
 import { parseOpenLogWorkbook } from "@/lib/parse-workbook";
 import { importOpenLogRows, recordSyncError } from "@/lib/import-rows";
 import { fetchExcelFromIntranet } from "@/lib/intranet";
-import { overlapFromDate, hkToday } from "@/lib/open-log";
+import { resolveExportRange, type ExportRangeMode } from "@/lib/open-log";
 
-export async function POST() {
+function asRangeMode(value: unknown): ExportRangeMode {
+  return value === "full" ? "full" : "sinceLast";
+}
+
+export async function POST(request: Request) {
   const session = await requireUser();
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });
   const [settings, sync] = await Promise.all([
@@ -17,8 +21,28 @@ export async function POST() {
     await recordSyncError("missing_settings");
     return NextResponse.json({ ok: false, error: "missing_settings" }, { status: 400 });
   }
-  const from = overlapFromDate(sync?.lastSuccessOpenDate ?? null, settings.firstImportDate);
-  const to = hkToday();
+  let mode: ExportRangeMode = sync?.lastSuccessAt ? "sinceLast" : "full";
+  let requestedFrom: string | undefined;
+  let requestedTo: string | undefined;
+  try {
+    const text = await request.text();
+    if (text) {
+      const body = JSON.parse(text) as { mode?: unknown; from?: unknown; to?: unknown };
+      mode = asRangeMode(body.mode ?? mode);
+      if (typeof body.from === "string" && body.from.trim()) requestedFrom = body.from.trim();
+      if (typeof body.to === "string" && body.to.trim()) requestedTo = body.to.trim();
+    }
+  } catch {
+    mode = sync?.lastSuccessAt ? "sinceLast" : "full";
+  }
+  const computed = resolveExportRange({
+    mode,
+    lastSuccessAt: sync?.lastSuccessAt ?? null,
+    lastSuccessOpenDate: sync?.lastSuccessOpenDate ?? null,
+    firstImportDate: settings.firstImportDate,
+  });
+  const from = requestedFrom ?? computed.from;
+  const to = requestedTo ?? computed.to;
   try {
     const excel = await fetchExcelFromIntranet({
       baseUrl: settings.intranetBaseUrl,

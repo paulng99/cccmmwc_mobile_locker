@@ -8,6 +8,8 @@ import {
   mapHeaderRow,
   formatHkDate,
   overlapFromDate,
+  incrementalExportFrom,
+  resolveExportRange,
   openedOnOrAfter,
   doorTone,
   parseSchoolPlace,
@@ -94,6 +96,49 @@ describe("parseDataRow", () => {
 describe("overlapFromDate", () => {
   it("uses first import date when never synced", () => {
     assert.equal(overlapFromDate(null, "2025-09-01"), "2025-09-01");
+  });
+});
+
+describe("incrementalExportFrom", () => {
+  it("uses first import midnight when never downloaded", () => {
+    assert.equal(incrementalExportFrom(null, "2025-09-01"), "2025-09-01 00:00:00");
+  });
+
+  it("subtracts five minutes from last download time in Hong Kong", () => {
+    const lastDownload = new Date("2026-09-21T04:30:00.000Z");
+    assert.equal(incrementalExportFrom(lastDownload, "2025-09-01"), "2026-09-21 12:25:00");
+  });
+});
+
+describe("resolveExportRange", () => {
+  const now = new Date("2026-09-21T06:00:00.000Z");
+
+  it("uses last download minus five minutes for the sinceLast option", () => {
+    const range = resolveExportRange({
+      mode: "sinceLast",
+      lastSuccessAt: new Date("2026-09-21T04:30:00.000Z"),
+      lastSuccessOpenDate: "2026-09-20",
+      firstImportDate: "2025-09-01",
+      now,
+    });
+    assert.deepEqual(range, {
+      from: "2026-09-21 12:25:00",
+      to: "2026-09-21 23:59:59",
+    });
+  });
+
+  it("keeps the full day range as the other option", () => {
+    const range = resolveExportRange({
+      mode: "full",
+      lastSuccessAt: new Date("2026-09-21T04:30:00.000Z"),
+      lastSuccessOpenDate: "2026-09-20",
+      firstImportDate: "2025-09-01",
+      now,
+    });
+    assert.deepEqual(range, {
+      from: "2026-09-20 00:00:00",
+      to: "2026-09-21 23:59:59",
+    });
   });
 });
 

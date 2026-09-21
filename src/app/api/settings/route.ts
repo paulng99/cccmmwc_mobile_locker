@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, readUnusedStudentNos, writeUnusedStudentNos } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { overlapFromDate, hkToday } from "@/lib/open-log";
+import { overlapFromDate, hkToday, incrementalExportFrom, exportRangeEnd } from "@/lib/open-log";
 import { recomputeCurrentState } from "@/lib/import-rows";
 
 export async function GET() {
@@ -12,6 +12,8 @@ export async function GET() {
     prisma.syncState.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } }),
   ]);
   const from = overlapFromDate(sync.lastSuccessOpenDate, settings.firstImportDate);
+  const incrementalFrom = incrementalExportFrom(sync.lastSuccessAt, settings.firstImportDate);
+  const exportTo = exportRangeEnd();
   return NextResponse.json({
     intranetBaseUrl: settings.intranetBaseUrl,
     sessionStorageKey: settings.sessionStorageKey,
@@ -27,6 +29,8 @@ export async function GET() {
     lastRowCount: sync.lastRowCount,
     from,
     to: hkToday(),
+    incrementalFrom,
+    exportTo,
   });
 }
 

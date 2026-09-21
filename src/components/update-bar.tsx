@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { CabinetLink } from "@/components/cabinet-link";
 import { fetchExcelFromIntranet, probeIntranet } from "@/lib/intranet";
-import { formatHkDateTime } from "@/lib/open-log";
+import { formatHkDateTime, type ExportRangeMode } from "@/lib/open-log";
 
 type Settings = {
   intranetBaseUrl: string;
@@ -14,6 +14,8 @@ type Settings = {
   exportApiPath: string;
   from: string;
   to: string;
+  incrementalFrom: string;
+  exportTo: string;
   lastSuccessAt: string | null;
 };
 
@@ -33,6 +35,7 @@ type SyncNotice = {
 };
 
 const SYNC_NOTICE_KEY = "locker-sync-notice";
+const RANGE_MODE_KEY = "locker-export-range-mode";
 
 function stashNotice(result: ImportResult, filename: string) {
   const notice: SyncNotice = {
@@ -44,10 +47,21 @@ function stashNotice(result: ImportResult, filename: string) {
   sessionStorage.setItem(SYNC_NOTICE_KEY, JSON.stringify(notice));
 }
 
+function readRangeMode(hasLastDownload: boolean): ExportRangeMode {
+  try {
+    const stored = localStorage.getItem(RANGE_MODE_KEY);
+    if (stored === "full" || stored === "sinceLast") return stored;
+  } catch {
+    // Private mode may block localStorage.
+  }
+  return hasLastDownload ? "sinceLast" : "full";
+}
+
 export function UpdateBar() {
   const t = useTranslations();
   const fileRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [rangeMode, setRangeMode] = useState<ExportRangeMode>("sinceLast");
   const [online, setOnline] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -62,6 +76,7 @@ export function UpdateBar() {
     }
     const data = (await response.json()) as Settings;
     setSettings(data);
+    setRangeMode(readRangeMode(Boolean(data.lastSuccessAt)));
     setOnline(await probeIntranet(data.intranetBaseUrl));
   }
 
@@ -98,11 +113,29 @@ export function UpdateBar() {
     window.location.reload();
   }
 
+  function selectedRange() {
+    if (!settings) return { from: "", to: "" };
+    if (rangeMode === "sinceLast") {
+      return { from: settings.incrementalFrom, to: settings.exportTo };
+    }
+    return { from: `${settings.from} 00:00:00`, to: settings.exportTo || `${settings.to} 23:59:59` };
+  }
+
+  function changeRangeMode(mode: ExportRangeMode) {
+    setRangeMode(mode);
+    try {
+      localStorage.setItem(RANGE_MODE_KEY, mode);
+    } catch {
+      // Ignore storage failures.
+    }
+  }
+
   async function update() {
     if (!settings) return;
     setBusy(true);
     setMessage(null);
     setError(null);
+    const { from, to } = selectedRange();
     const reachable = await probeIntranet(settings.intranetBaseUrl);
     setOnline(reachable);
     if (reachable) {
@@ -112,8 +145,8 @@ export function UpdateBar() {
           exportApiPath: settings.exportApiPath,
           storageKey: settings.sessionStorageKey,
           sessionInput: settings.sessionPayload,
-          from: settings.from,
-          to: settings.to,
+          from,
+          to,
         });
         await importWorkbook(
           new Blob([excel], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
@@ -126,7 +159,11 @@ export function UpdateBar() {
       }
     }
     try {
-      const proxy = await fetch("/api/sync/proxy", { method: "POST" });
+      const proxy = await fetch("/api/sync/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: rangeMode, from, to }),
+      });
       const result = (await proxy.json()) as ImportResult;
       if (!proxy.ok) {
         setError(failMessage(result.error));
@@ -166,9 +203,6 @@ export function UpdateBar() {
           {online ? t("intranetOk") : t("intranetFail")}
         </span>
         <span>
-          {t("dateRange")}: {settings ? `${settings.from} → ${settings.to}` : "…"}
-        </span>
-        <span>
           {t("lastSync")}: {settings?.lastSuccessAt ? `${formatHkDateTime(new Date(settings.lastSuccessAt))} HKT` : t("never")}
         </span>
         <button className="primary" type="button" onClick={update} disabled={busy}>
@@ -184,6 +218,28 @@ export function UpdateBar() {
           accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
           onChange={onUpload}
         />
+      </div>
+      <div className="sync-row">
+        <label className="range-pick">
+          {t("exportRange")}
+          <select
+            value={rangeMode}
+            onChange={(event) => changeRangeMode(event.target.value as ExportRangeMode)}
+            disabled={busy || !settings}
+          >
+            <option value="sinceLast">
+              {t("exportSinceLast")}
+              {settings ? ` · ${settings.incrementalFrom} → ${settings.exportTo}` : ""}
+            </option>
+            <option value="full">
+              {t("exportFullRange")}
+              {settings ? ` · ${settings.from} 00:00:00 → ${settings.exportTo}` : ""}
+            </option>
+          </select>
+        </label>
+        <span>
+          {t("dateRange")}: {settings ? `${selectedRange().from} → ${selectedRange().to}` : "…"}
+        </span>
       </div>
       <p className="hint">
         {t("uploadHint")}{" "}

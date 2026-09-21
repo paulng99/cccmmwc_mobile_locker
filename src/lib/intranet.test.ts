@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   candidateExportUrls,
   candidateFrpUserExportUrls,
+  exportQuery,
   fetchExcelFromIntranet,
   normalizeSessionPayload,
   parseAuthInput,
@@ -57,6 +58,22 @@ describe("parseAuthInput", () => {
   });
 });
 
+describe("exportQuery", () => {
+  it("keeps date-only bounds as start and end of day", () => {
+    const query = exportQuery("2025-09-01", "2026-09-21");
+    assert.ok(query.includes("startTime=2025-09-01+00%3A00%3A00"));
+    assert.ok(query.includes("endTime=2026-09-21+23%3A59%3A59"));
+  });
+
+  it("passes a datetime start unchanged so incremental downloads stay small", () => {
+    const query = exportQuery("2026-09-21 12:25:00", "2026-09-21 23:59:59");
+    const params = new URLSearchParams(query);
+    assert.equal(params.get("startTime"), "2026-09-21 12:25:00");
+    assert.equal(params.get("Searcher.OpenDate"), "2026-09-21 12:25:00 ~ 2026-09-21 23:59:59");
+    assert.equal(params.get("endTime"), "2026-09-21 23:59:59");
+  });
+});
+
 describe("candidateExportUrls", () => {
   it("uses the WalkingTec OpenLog export path", () => {
     const urls = candidateExportUrls("http://10.127.7.200:17789/", "", "2025-09-01", "2026-09-19");
@@ -82,11 +99,11 @@ describe("fetchExcelFromIntranet", () => {
     const excel = new Uint8Array(80);
     excel[0] = 0x50;
     excel[1] = 0x4b;
-    const calls: Array<{ url: string; method?: string }> = [];
+    const calls: Array<{ url: string; method?: string; body?: string }> = [];
     const original = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      calls.push({ url, method: init?.method });
+      calls.push({ url, method: init?.method, body: typeof init?.body === "string" ? init.body : "" });
       return new Response(excel, {
         status: 200,
         headers: { "content-type": "application/vnd.ms-excel" },
@@ -103,6 +120,7 @@ describe("fetchExcelFromIntranet", () => {
       });
       assert.equal(calls[0]?.method, "POST");
       assert.equal(calls[0]?.url, "http://10.127.7.200:17789/Logs/OpenLog/ExportExcel?1=1");
+      assert.ok(calls[0]?.body?.includes("startTime=2025-09-01+00%3A00%3A00"));
       assert.equal(buffer.byteLength, 80);
     } finally {
       globalThis.fetch = original;

@@ -361,6 +361,34 @@ export function overlapFromDate(lastSuccessOpenDate: string | null, firstImportD
   return lastSuccessOpenDate;
 }
 
+const INCREMENTAL_OVERLAP_MS = 5 * 60 * 1000;
+
+export type ExportRangeMode = "sinceLast" | "full";
+
+export function incrementalExportFrom(lastSuccessAt: Date | null, firstImportDate: string): string {
+  if (!lastSuccessAt) return `${firstImportDate.trim()} 00:00:00`;
+  return formatHkDateTime(new Date(lastSuccessAt.getTime() - INCREMENTAL_OVERLAP_MS));
+}
+
+export function exportRangeEnd(now = new Date()): string {
+  return `${formatHkDate(now)} 23:59:59`;
+}
+
+export function resolveExportRange(options: {
+  mode: ExportRangeMode;
+  lastSuccessAt: Date | null;
+  lastSuccessOpenDate: string | null;
+  firstImportDate: string;
+  now?: Date;
+}): { from: string; to: string } {
+  const to = exportRangeEnd(options.now);
+  if (options.mode === "sinceLast") {
+    return { from: incrementalExportFrom(options.lastSuccessAt, options.firstImportDate), to };
+  }
+  const fromDate = overlapFromDate(options.lastSuccessOpenDate, options.firstImportDate);
+  return { from: `${fromDate} 00:00:00`, to };
+}
+
 export function firstImportStart(firstImportDate: string): Date {
   const match = firstImportDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   const day = match ? `${match[1]}-${match[2]}-${match[3]}` : "2025-09-01";
