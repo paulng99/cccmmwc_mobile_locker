@@ -12,6 +12,7 @@ import {
   doorTone,
   parseSchoolPlace,
   compareSchoolPlace,
+  groupByFormAndClass,
   parseUnusedStudentNos,
   studentRowTone,
   matchesStudentUsageFilter,
@@ -138,6 +139,35 @@ describe("parseSchoolPlace", () => {
     assert.deepEqual(
       rows.map((row) => `${row.classGroup}${String(row.classNo).padStart(2, "0")}`),
       ["1A02", "1A10", "1C10", "2A03"],
+    );
+  });
+
+  it("groups by form then class without reordering students inside a class", () => {
+    const rows = ["4D02", "1C01", "1A03", "4D01", "1C10", "1A01"].map((id) => ({
+      id,
+      ...parseSchoolPlace(id, ""),
+    }));
+    assert.deepEqual(
+      groupByFormAndClass(rows).map((form) => ({
+        form: form.form,
+        classes: form.classes.map((klass) => ({
+          classGroup: klass.classGroup,
+          ids: klass.rows.map((row) => row.id),
+        })),
+      })),
+      [
+        {
+          form: "1",
+          classes: [
+            { classGroup: "1A", ids: ["1A03", "1A01"] },
+            { classGroup: "1C", ids: ["1C01", "1C10"] },
+          ],
+        },
+        {
+          form: "4",
+          classes: [{ classGroup: "4D", ids: ["4D02", "4D01"] }],
+        },
+      ],
     );
   });
 });

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { CrossIcon, HistoryIcon, YesIcon } from "@/components/icons";
-import { compareSchoolPlace, matchesStudentUsageFilter, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
+import { compareSchoolPlace, groupByFormAndClass, matchesStudentUsageFilter, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
 
 type Row = {
   studentNo: string;
@@ -112,6 +112,8 @@ export function StudentTable() {
     return [...map.entries()];
   }, [visible, t]);
 
+  const formGroups = useMemo(() => (noUseToday ? groupByFormAndClass(visible) : []), [noUseToday, visible]);
+
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir((value) => (value === "asc" ? "desc" : "asc"));
@@ -136,6 +138,57 @@ export function StudentTable() {
       </th>
     );
   }
+
+  function studentTable(list: Placed[]) {
+    return (
+      <table className="table">
+        <thead>
+          <tr>
+            {head("form", t("form"))}
+            {head("class", t("class"))}
+            {head("studentNo", t("studentNo"))}
+            {head("studentName", t("studentName"))}
+            {head("assignedLocker", t("assignedLocker"))}
+            {head("lastLocker", t("lastLocker"))}
+            {head("lastUsed", t("lastUsed"))}
+            {head("unused", t("unused"))}
+            {head("todayOnce", t("todayOnce"))}
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {list.map((row) => (
+            <tr
+              key={row.studentNo}
+              className={studentRowTone({ unused: row.unused, todayOpenCount: row.todayOpenCount })}
+            >
+              <td>{row.form ? t("formGrade", { id: row.form }) : "—"}</td>
+              <td>{row.classGroup || row.classCode || "—"}</td>
+              <td>{row.classNo ? String(row.classNo).padStart(2, "0") : row.studentNo}</td>
+              <td>{row.studentName ?? ""}</td>
+              <td>{row.assignedLockerCode || t("vacant")}</td>
+              <td>{row.lastLockerCode || t("vacant")}</td>
+              <td>{row.lastOpenedAt ?? t("vacant")}</td>
+              <td className="mark">{row.unused ? <CrossIcon label={t("unused")} /> : ""}</td>
+              <td className="mark">{row.todayOpenCount === 1 ? <YesIcon label={t("yes")} /> : ""}</td>
+              <td className="mark">
+                <Link
+                  className="history"
+                  href={`/history?studentNo=${encodeURIComponent(row.studentNo)}`}
+                  aria-label={t("history")}
+                  title={t("history")}
+                >
+                  <HistoryIcon />
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  const empty = noUseToday ? formGroups.length === 0 : groups.length === 0;
 
   return (
     <section className="card">
@@ -193,8 +246,26 @@ export function StudentTable() {
           {t("openedOnceToday")}
         </label>
       </div>
-      {groups.length === 0 ? (
+      {empty ? (
         <p className="hint">{t("noRows")}</p>
+      ) : noUseToday ? (
+        formGroups.map((formGroup) => (
+          <section key={formGroup.form || "other"} className="form-section">
+            <h2>
+              {formGroup.form ? t("formGrade", { id: formGroup.form }) : t("otherGroup")}
+              <span>{formGroup.classes.reduce((count, item) => count + item.rows.length, 0)}</span>
+            </h2>
+            {formGroup.classes.map((classGroup) => (
+              <div key={classGroup.classGroup || "other"} className="student-group">
+                <h3>
+                  {classGroup.classGroup ? t("classGroup", { id: classGroup.classGroup }) : t("otherGroup")}
+                  <span>{classGroup.rows.length}</span>
+                </h3>
+                {studentTable(classGroup.rows)}
+              </div>
+            ))}
+          </section>
+        ))
       ) : (
         groups.map(([group, list]) => (
           <div key={group} className="student-group">
@@ -202,50 +273,7 @@ export function StudentTable() {
               {list[0].form ? `${t("formGrade", { id: list[0].form })} · ${t("classGroup", { id: group })}` : t("otherGroup")}
               <span>{list.length}</span>
             </h2>
-            <table className="table">
-              <thead>
-                <tr>
-                  {head("form", t("form"))}
-                  {head("class", t("class"))}
-                  {head("studentNo", t("studentNo"))}
-                  {head("studentName", t("studentName"))}
-                  {head("assignedLocker", t("assignedLocker"))}
-                  {head("lastLocker", t("lastLocker"))}
-                  {head("lastUsed", t("lastUsed"))}
-                  {head("unused", t("unused"))}
-                  {head("todayOnce", t("todayOnce"))}
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((row) => (
-                  <tr
-                    key={row.studentNo}
-                    className={studentRowTone({ unused: row.unused, todayOpenCount: row.todayOpenCount })}
-                  >
-                    <td>{row.form ? t("formGrade", { id: row.form }) : "—"}</td>
-                    <td>{row.classGroup || row.classCode || "—"}</td>
-                    <td>{row.classNo ? String(row.classNo).padStart(2, "0") : row.studentNo}</td>
-                    <td>{row.studentName ?? ""}</td>
-                    <td>{row.assignedLockerCode || t("vacant")}</td>
-                    <td>{row.lastLockerCode || t("vacant")}</td>
-                    <td>{row.lastOpenedAt ?? t("vacant")}</td>
-                    <td className="mark">{row.unused ? <CrossIcon label={t("unused")} /> : ""}</td>
-                    <td className="mark">{row.todayOpenCount === 1 ? <YesIcon label={t("yes")} /> : ""}</td>
-                    <td className="mark">
-                      <Link
-                        className="history"
-                        href={`/history?studentNo=${encodeURIComponent(row.studentNo)}`}
-                        aria-label={t("history")}
-                        title={t("history")}
-                      >
-                        <HistoryIcon />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {studentTable(list)}
           </div>
         ))
       )}

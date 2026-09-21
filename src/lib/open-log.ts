@@ -85,6 +85,34 @@ export function compareSchoolPlace(a: SchoolPlace, b: SchoolPlace): number {
   if (a.classNo !== b.classNo) return a.classNo - b.classNo;
   return 0;
 }
+
+export type FormClassGroups<T> = Array<{
+  form: string;
+  classes: Array<{ classGroup: string; rows: T[] }>;
+}>;
+
+export function groupByFormAndClass<T extends SchoolPlace>(rows: T[]): FormClassGroups<T> {
+  const forms = new Map<string, Map<string, T[]>>();
+  for (const row of rows) {
+    const classes = forms.get(row.form) ?? new Map<string, T[]>();
+    const list = classes.get(row.classGroup) ?? [];
+    list.push(row);
+    classes.set(row.classGroup, list);
+    forms.set(row.form, classes);
+  }
+  return [...forms.entries()]
+    .sort(([a], [b]) => (a ? Number(a) : 99) - (b ? Number(b) : 99))
+    .map(([form, classes]) => ({
+      form,
+      classes: [...classes.entries()]
+        .sort(([a], [b]) => {
+          if (!a) return 1;
+          if (!b) return -1;
+          return a.localeCompare(b, "en");
+        })
+        .map(([classGroup, classRows]) => ({ classGroup, rows: classRows })),
+    }));
+}
 export type Cabinet = (typeof CABINETS)[number];
 
 export type ParsedLocker = {
