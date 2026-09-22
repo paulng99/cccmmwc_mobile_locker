@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/routing";
+import { downloadCsv, toCsv } from "@/lib/csv";
+import { formatHkDate } from "@/lib/open-log";
 
 type Row = {
   id: string;
@@ -18,12 +20,16 @@ type Row = {
   remark: string;
 };
 
+type SortKey = "openedAt" | "studentName" | "studentNo" | "class" | "locker" | "openType" | "verify" | "admin" | "remark";
+
 export function HistoryTable() {
   const t = useTranslations();
   const search = useSearchParams();
   const studentNo = search.get("studentNo");
   const lockerCode = search.get("lockerCode");
   const [rows, setRows] = useState<Row[]>([]);
+  const [sortKey, setSortKey] = useState<SortKey>("openedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -36,33 +42,120 @@ export function HistoryTable() {
     })();
   }, [studentNo, lockerCode]);
 
+  const visible = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const value = (row: Row) => {
+        switch (sortKey) {
+          case "openedAt":
+            return row.openedAt;
+          case "studentName":
+            return row.studentName ?? "";
+          case "studentNo":
+            return row.studentNo;
+          case "class":
+            return row.classCode;
+          case "locker":
+            return row.lockerCode;
+          case "openType":
+            return row.openType;
+          case "verify":
+            return row.verifyMethod;
+          case "admin":
+            return row.adminName;
+          case "remark":
+            return row.remark;
+          default:
+            return "";
+        }
+      };
+      return String(value(a)).localeCompare(String(value(b)), "en") * dir;
+    });
+  }, [rows, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((value) => (value === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir("asc");
+  }
+
+  function sortMark(key: SortKey) {
+    if (sortKey !== key) return "";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  }
+
+  function head(key: SortKey, label: string) {
+    return (
+      <th>
+        <button type="button" className="sort" onClick={() => toggleSort(key)}>
+          {label}
+          {sortMark(key)}
+        </button>
+      </th>
+    );
+  }
+
+  function downloadVisible() {
+    const headers = [
+      t("openedAt"),
+      t("studentName"),
+      t("studentNo"),
+      t("class"),
+      t("lastLocker"),
+      t("openType"),
+      t("verify"),
+      t("admin"),
+      t("remark"),
+    ];
+    const data = visible.map((row) => [
+      row.openedAt,
+      row.studentName ?? "",
+      row.studentNo,
+      row.classCode,
+      row.lockerCode,
+      row.openType,
+      row.verifyMethod,
+      row.adminName,
+      row.remark,
+    ]);
+    downloadCsv(`history-${formatHkDate(new Date())}.csv`, toCsv(headers, data));
+  }
+
   return (
     <section className="card">
       <p>
         <Link href="/">{t("back")}</Link>
       </p>
-      <h1>{t("history")}</h1>
+      <div className="table-heading">
+        <h1>{t("history")}</h1>
+        <button type="button" className="secondary" disabled={visible.length === 0} onClick={downloadVisible}>
+          {t("downloadCsv")}
+        </button>
+      </div>
       <table className="table">
         <thead>
           <tr>
-            <th>{t("openedAt")}</th>
-            <th>{t("studentName")}</th>
-            <th>{t("studentNo")}</th>
-            <th>{t("class")}</th>
-            <th>{t("lastLocker")}</th>
-            <th>{t("openType")}</th>
-            <th>{t("verify")}</th>
-            <th>{t("admin")}</th>
-            <th>{t("remark")}</th>
+            {head("openedAt", t("openedAt"))}
+            {head("studentName", t("studentName"))}
+            {head("studentNo", t("studentNo"))}
+            {head("class", t("class"))}
+            {head("locker", t("lastLocker"))}
+            {head("openType", t("openType"))}
+            {head("verify", t("verify"))}
+            {head("admin", t("admin"))}
+            {head("remark", t("remark"))}
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
+          {visible.length === 0 ? (
             <tr>
               <td colSpan={9}>{t("noRows")}</td>
             </tr>
           ) : (
-            rows.map((row) => (
+            visible.map((row) => (
               <tr key={row.id}>
                 <td>{row.openedAt}</td>
                 <td>{row.studentName ?? ""}</td>

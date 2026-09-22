@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { CrossIcon, HistoryIcon, YesIcon } from "@/components/icons";
-import { compareSchoolPlace, groupByFormAndClass, matchesStudentUsageFilter, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
+import { downloadCsv, toCsv } from "@/lib/csv";
+import { compareSchoolPlace, formatHkDate, groupByFormAndClass, matchesStudentUsageFilter, parseSchoolPlace, studentRowTone } from "@/lib/open-log";
 
 type Row = {
   studentNo: string;
@@ -128,6 +129,32 @@ export function StudentTable() {
     return sortDir === "asc" ? " ↑" : " ↓";
   }
 
+  function downloadVisible() {
+    const headers = [
+      t("form"),
+      t("class"),
+      t("studentNo"),
+      t("studentName"),
+      t("assignedLocker"),
+      t("lastLocker"),
+      t("lastUsed"),
+      t("unused"),
+      t("todayOnce"),
+    ];
+    const data = visible.map((row) => [
+      row.form ? t("formGrade", { id: row.form }) : "",
+      row.classGroup || row.classCode || "",
+      row.classNo ? String(row.classNo).padStart(2, "0") : row.studentNo,
+      row.studentName ?? "",
+      row.assignedLockerCode || t("vacant"),
+      row.lastLockerCode || t("vacant"),
+      row.lastOpenedAt ?? "",
+      row.unused ? t("yes") : "",
+      row.todayOpenCount === 1 ? t("yes") : "",
+    ]);
+    downloadCsv(`students-${formatHkDate(new Date())}.csv`, toCsv(headers, data));
+  }
+
   function head(key: SortKey, label: string) {
     return (
       <th>
@@ -245,6 +272,11 @@ export function StudentTable() {
           />
           {t("openedOnceToday")}
         </label>
+      </div>
+      <div className="table-actions">
+        <button type="button" className="secondary" disabled={visible.length === 0} onClick={downloadVisible}>
+          {t("downloadCsv")}
+        </button>
       </div>
       {empty ? (
         <p className="hint">{t("noRows")}</p>
