@@ -102,6 +102,8 @@ export function StudentTable() {
     });
   }, [placed, form, klass, sortKey, sortDir, noUseToday, openedOnce]);
 
+  const useFormClassLayout = noUseToday || openedOnce;
+
   const groups = useMemo(() => {
     const map = new Map<string, Placed[]>();
     for (const row of visible) {
@@ -113,7 +115,10 @@ export function StudentTable() {
     return [...map.entries()];
   }, [visible, t]);
 
-  const formGroups = useMemo(() => (noUseToday ? groupByFormAndClass(visible) : []), [noUseToday, visible]);
+  const formGroups = useMemo(
+    () => (useFormClassLayout ? groupByFormAndClass(visible) : []),
+    [useFormClassLayout, visible],
+  );
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -215,7 +220,7 @@ export function StudentTable() {
     );
   }
 
-  const empty = noUseToday ? formGroups.length === 0 : groups.length === 0;
+  const empty = useFormClassLayout ? formGroups.length === 0 : groups.length === 0;
 
   return (
     <section className="card">
@@ -280,7 +285,7 @@ export function StudentTable() {
       </div>
       {empty ? (
         <p className="hint">{t("noRows")}</p>
-      ) : noUseToday ? (
+      ) : useFormClassLayout ? (
         formGroups.map((formGroup) => (
           <section key={formGroup.form || "other"} className="form-section">
             <h2>
