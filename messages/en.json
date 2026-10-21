@@ -40,7 +40,7 @@
   "saved": "Saved",
   "intranetUrl": "Intranet URL",
   "session": "Locker login cookie (optional)",
-  "sessionHint": "Optional. Paste the .AspNetCore cookie from 智能柜 DevTools → Application → Cookies. Tea analytics JSON is ignored. Not stored in git. Open 智能柜 sends this saved cookie.",
+  "sessionHint": "Fallback. Prefer host .env LOCKER_AUTH_COOKIE (takes precedence). Paste .AspNetCore.Face.CookieWithJwtAuth from DevTools → Cookies (not Identity.Application). Tea analytics JSON is ignored. Never store ITCode/password.",
   "saveFail": "Could not save settings.",
   "exportPath": "Export API path (optional)",
   "firstImport": "First import date",

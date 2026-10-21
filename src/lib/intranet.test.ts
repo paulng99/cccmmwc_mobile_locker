@@ -3,10 +3,15 @@ import assert from "node:assert/strict";
 import {
   candidateExportUrls,
   candidateFrpUserExportUrls,
+  DEFAULT_LOCKER_AUTH_COOKIE_NAME,
   exportQuery,
   fetchExcelFromIntranet,
+  formatAuthCookie,
+  hasConfiguredAuthCookie,
   normalizeSessionPayload,
   parseAuthInput,
+  resolveIntranetBaseUrl,
+  resolveSessionInput,
 } from "./intranet.ts";
 
 describe("normalizeSessionPayload", () => {
@@ -33,7 +38,7 @@ describe("parseAuthInput", () => {
   });
 
   it("treats an ASP.NET cookie header as cookie auth", () => {
-    const cookie = ".AspNetCore.Identity.Application=abc123; divid=xyz";
+    const cookie = ".AspNetCore.Face.CookieWithJwtAuth=abc123; divid=xyz";
     assert.deepEqual(parseAuthInput(cookie), { kind: "cookie", cookie });
   });
 
@@ -55,6 +60,69 @@ describe("parseAuthInput", () => {
       '{"sessionId":"584146e7-1515-497e-bd25-6c535a626e58","timestamp":1}',
     );
     assert.equal(parsed.kind, "none");
+  });
+});
+
+describe("formatAuthCookie / resolveSessionInput", () => {
+  const prevCookie = process.env.LOCKER_AUTH_COOKIE;
+  const prevName = process.env.LOCKER_AUTH_COOKIE_NAME;
+  const prevBase = process.env.LOCKER_INTRANET_BASE_URL;
+
+  function restoreEnv() {
+    if (prevCookie === undefined) delete process.env.LOCKER_AUTH_COOKIE;
+    else process.env.LOCKER_AUTH_COOKIE = prevCookie;
+    if (prevName === undefined) delete process.env.LOCKER_AUTH_COOKIE_NAME;
+    else process.env.LOCKER_AUTH_COOKIE_NAME = prevName;
+    if (prevBase === undefined) delete process.env.LOCKER_INTRANET_BASE_URL;
+    else process.env.LOCKER_INTRANET_BASE_URL = prevBase;
+  }
+
+  it("prefixes a bare token with the Face cookie name", () => {
+    assert.equal(
+      formatAuthCookie("bareTokenOnly"),
+      `${DEFAULT_LOCKER_AUTH_COOKIE_NAME}=bareTokenOnly`,
+    );
+  });
+
+  it("keeps a name=value cookie string unchanged", () => {
+    const cookie = ".AspNetCore.Face.CookieWithJwtAuth=already=set";
+    assert.equal(formatAuthCookie(cookie), cookie);
+  });
+
+  it("prefers LOCKER_AUTH_COOKIE over DB payload", () => {
+    try {
+      process.env.LOCKER_AUTH_COOKIE = "envBareToken";
+      delete process.env.LOCKER_AUTH_COOKIE_NAME;
+      assert.equal(
+        resolveSessionInput(".AspNetCore.Face.CookieWithJwtAuth=from-db"),
+        `${DEFAULT_LOCKER_AUTH_COOKIE_NAME}=envBareToken`,
+      );
+      assert.equal(hasConfiguredAuthCookie(""), true);
+    } finally {
+      restoreEnv();
+    }
+  });
+
+  it("falls back to DB payload when env cookie is empty", () => {
+    try {
+      delete process.env.LOCKER_AUTH_COOKIE;
+      assert.equal(
+        resolveSessionInput(".AspNetCore.Face.CookieWithJwtAuth=from-db"),
+        ".AspNetCore.Face.CookieWithJwtAuth=from-db",
+      );
+      assert.equal(hasConfiguredAuthCookie(""), false);
+    } finally {
+      restoreEnv();
+    }
+  });
+
+  it("prefers LOCKER_INTRANET_BASE_URL over DB base URL", () => {
+    try {
+      process.env.LOCKER_INTRANET_BASE_URL = "http://10.0.0.9:17789";
+      assert.equal(resolveIntranetBaseUrl("http://10.127.7.200:17789"), "http://10.0.0.9:17789");
+    } finally {
+      restoreEnv();
+    }
   });
 });
 

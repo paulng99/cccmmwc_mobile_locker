@@ -5,6 +5,43 @@ export type SessionPayload = {
 
 export type AuthInput = { kind: "none" } | { kind: "cookie"; cookie: string };
 
+/** OpenLog Face JWT cookie name (not Identity.Application). */
+export const DEFAULT_LOCKER_AUTH_COOKIE_NAME = ".AspNetCore.Face.CookieWithJwtAuth";
+
+/**
+ * Prefer LOCKER_AUTH_COOKIE (env / host secret) over DB session_payload.
+ * Bare tokens (no `=`) become `COOKIE_NAME=token`.
+ */
+export function formatAuthCookie(
+  raw: string,
+  cookieName = process.env.LOCKER_AUTH_COOKIE_NAME?.trim() || DEFAULT_LOCKER_AUTH_COOKIE_NAME,
+): string {
+  const text = raw.trim();
+  if (!text) return "";
+  if (!text.includes("=")) {
+    return `${cookieName}=${text}`;
+  }
+  return text;
+}
+
+export function resolveSessionInput(dbPayload: string): string {
+  const fromEnv = process.env.LOCKER_AUTH_COOKIE?.trim();
+  if (fromEnv) {
+    return formatAuthCookie(fromEnv);
+  }
+  return dbPayload?.trim() ?? "";
+}
+
+export function resolveIntranetBaseUrl(dbUrl: string): string {
+  const fromEnv = process.env.LOCKER_INTRANET_BASE_URL?.trim();
+  if (fromEnv) return fromEnv;
+  return dbUrl;
+}
+
+export function hasConfiguredAuthCookie(dbPayload: string): boolean {
+  return Boolean(process.env.LOCKER_AUTH_COOKIE?.trim() || dbPayload?.trim());
+}
+
 export function normalizeSessionPayload(input: string): SessionPayload | null {
   const text = input.trim();
   if (!text) return null;
@@ -146,9 +183,11 @@ export async function fetchExcelFromIntranet(options: {
   from: string;
   to: string;
 }): Promise<ArrayBuffer> {
+  const baseUrl = resolveIntranetBaseUrl(options.baseUrl);
+  const sessionInput = resolveSessionInput(options.sessionInput);
   return fetchExcelFromUrls(
-    candidateExportUrls(options.baseUrl, options.exportApiPath, options.from, options.to),
-    options.sessionInput,
+    candidateExportUrls(baseUrl, options.exportApiPath, options.from, options.to),
+    sessionInput,
     exportQuery(options.from, options.to),
   );
 }
@@ -157,7 +196,9 @@ export async function fetchFrpUserExcelFromIntranet(options: {
   baseUrl: string;
   sessionInput: string;
 }): Promise<ArrayBuffer> {
-  return fetchExcelFromUrls(candidateFrpUserExportUrls(options.baseUrl), options.sessionInput);
+  const baseUrl = resolveIntranetBaseUrl(options.baseUrl);
+  const sessionInput = resolveSessionInput(options.sessionInput);
+  return fetchExcelFromUrls(candidateFrpUserExportUrls(baseUrl), sessionInput);
 }
 
 async function fetchExcelFromUrls(urls: string[], sessionInput: string, body = ""): Promise<ArrayBuffer> {
