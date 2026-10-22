@@ -78,20 +78,41 @@ http://（這台電腦的內網 IP）:3000
 
 ---
 
-## 設定智能柜 Cookie（可選）
+## 設定智能柜 Cookie（建議：環境變數）
 
 設定 Cookie 後，按「更新」時系統可用你的帳號身份自動下載 Excel，省去每次手動匯出的步驟。
 
-**Settings 頁中的欄位名稱：** 「智能柜登入 Cookie（可選）」
+**優先順序：** 主機 `.env` 的 `LOCKER_AUTH_COOKIE`（經 Docker Compose 傳入容器）**優先於** Settings 頁貼上的 Cookie。Settings UI 仍保留作後備。
 
-**取得方式：**
+**正確 Cookie 名稱：** `.AspNetCore.Face.CookieWithJwtAuth`（**不是** `.AspNetCore.Identity.Application`）。
+
+### 方法 A：寫入 `.env`（等同 Coolify Secret；建議）
+
+1. 在瀏覽器登入智能柜，DevTools → Application → Cookies，複製 **`.AspNetCore.Face.CookieWithJwtAuth`** 的值。
+2. 編輯主機 `.env`（**不要 commit**）：
+
+```bash
+# 可只填 token；或填完整 name=value
+LOCKER_AUTH_COOKIE="你的 cookie 值"
+# 可選；預設已是 Face.CookieWithJwtAuth
+# LOCKER_AUTH_COOKIE_NAME=".AspNetCore.Face.CookieWithJwtAuth"
+```
+
+3. `docker compose up -d`（或重啟 app 容器）使環境變數生效。
+4. 登入本系統 admin，按「更新」——無需再在 Settings 貼 Cookie。
+
+> ⚠️ **只放 Cookie。** 永遠不要把 ITCode／密碼寫進 `.env`、Settings 或 Git。本 PR 不做全自動登入。
+
+### 方法 B：Settings 頁貼上（後備）
+
+**欄位名稱：** 「智能柜登入 Cookie（可選）」
 
 1. 在**同一台電腦**的瀏覽器打開智能柜網頁並登入。
 2. 按 F12 開啟 DevTools → 切換到 **Application** 頁籤 → 左側選 **Cookies**。
-3. 找到並複製 **`.AspNetCore.Identity.Application`** 的值（不包括 `Culture` 等其他 cookie）。
+3. 找到並複製 **`.AspNetCore.Face.CookieWithJwtAuth`** 的值（不包括 `Culture` 等其他 cookie）。
 4. 回到本系統 Settings 頁，把這段值貼進「智能柜登入 Cookie（可選）」欄位，按「儲存」。
 
-> ⚠️ 貼入欄位的是 **cookie 字串**（格式如 `.AspNetCore.Identity.Application=CfDJ8…`），**不是** JSON 物件。`__tea_` 開頭的統計 JSON（如 `{"sessionId":…}`）**無效**，系統會忽略。
+> ⚠️ 貼入欄位的是 **cookie 字串**（格式如 `.AspNetCore.Face.CookieWithJwtAuth=CfDJ8…`），**不是** JSON 物件。`__tea_` 開頭的統計 JSON（如 `{"sessionId":…}`）**無效**，系統會忽略。
 
 ---
 
@@ -100,8 +121,8 @@ http://（這台電腦的內網 IP）:3000
 若更新時出現「請先在呢部電腦登入智能柜」或「手機櫃系統要求重新登入」提示，代表 Cookie 已失效。處理步驟：
 
 1. 在同一台電腦重新登入智能柜。
-2. 重新到 DevTools 複製 `.AspNetCore.Identity.Application` 的值。
-3. 貼回 Settings 頁「智能柜登入 Cookie（可選）」欄位並儲存。
+2. 重新到 DevTools 複製 `.AspNetCore.Face.CookieWithJwtAuth` 的值。
+3. 更新主機 `.env` 的 `LOCKER_AUTH_COOKIE` 並重啟容器；**或**貼回 Settings 頁並儲存。
 4. 再按「更新」。
 
 或改為在智能柜頁面手動匯出 Excel，用「上傳 Excel」功能匯入。
@@ -114,8 +135,8 @@ http://（這台電腦的內網 IP）:3000
 |------|----------------|
 | 打開頁面顯示「無法連線」 | 確認 Docker 已啟動、用 HTTP（非 HTTPS）、輸入正確內網 IP 及 `:3000` 連接埠 |
 | 「更新」一直失敗 | 確認這台電腦已連上校網，且能連到 `10.127.7.200` |
-| 更新顯示 CORS 錯誤後繼續 | 正常行為，系統自動切換為 Docker 服務端轉發 |
-| Cookie 無效 / 被忽略 | 確認貼入的是 `.AspNetCore.Identity.Application=…` cookie 字串，而非 JSON |
+| 更新顯示 CORS 錯誤後繼續 | 正常行為，系統自動切換為 Docker 服務端轉發（會讀取 `LOCKER_AUTH_COOKIE`） |
+| Cookie 無效 / 被忽略 | 確認是 `.AspNetCore.Face.CookieWithJwtAuth=…`，而非 Identity.Application 或 JSON |
 | Session 過期提示 | 按上方「Session 過期處理」步驟重新取得 Cookie |
 
 ---

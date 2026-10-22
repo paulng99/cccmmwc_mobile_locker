@@ -24,6 +24,10 @@ services:
       DATABASE_URL: postgresql://locker:locker@db:5432/locker
       SESSION_SECRET: ${SESSION_SECRET:-replace-with-at-least-32-character-secret}
       TZ: Asia/Hong_Kong
+      # OpenLog cookie（等同 Coolify Secret）：只放 Cookie，勿放 ITCode／密碼
+      LOCKER_AUTH_COOKIE: ${LOCKER_AUTH_COOKIE:-}
+      LOCKER_AUTH_COOKIE_NAME: ${LOCKER_AUTH_COOKIE_NAME:-.AspNetCore.Face.CookieWithJwtAuth}
+      LOCKER_INTRANET_BASE_URL: ${LOCKER_INTRANET_BASE_URL:-}
     depends_on:
       db:
         condition: service_healthy

@@ -3,6 +3,7 @@ import { prisma, readUnusedStudentNos, writeUnusedStudentNos } from "@/lib/prism
 import { requireUser } from "@/lib/session";
 import { overlapFromDate, hkToday, incrementalExportFrom, exportRangeEnd } from "@/lib/open-log";
 import { recomputeCurrentState } from "@/lib/import-rows";
+import { hasConfiguredAuthCookie } from "@/lib/intranet";
 
 export async function GET() {
   const session = await requireUser();
@@ -17,7 +18,8 @@ export async function GET() {
   return NextResponse.json({
     intranetBaseUrl: settings.intranetBaseUrl,
     sessionStorageKey: settings.sessionStorageKey,
-    hasSession: Boolean(settings.sessionPayload),
+    hasSession: hasConfiguredAuthCookie(settings.sessionPayload),
+    // DB-only paste fallback; never expose LOCKER_AUTH_COOKIE to the client.
     sessionPayload: settings.sessionPayload,
     exportApiPath: settings.exportApiPath,
     firstImportDate: settings.firstImportDate,
@@ -66,6 +68,6 @@ export async function PUT(request: Request) {
   }
   return NextResponse.json({
     ok: true,
-    hasSession: Boolean(updated.sessionPayload),
+    hasSession: hasConfiguredAuthCookie(updated.sessionPayload),
   });
 }

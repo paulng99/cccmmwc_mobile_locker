@@ -135,7 +135,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           rows={4}
           value={form.sessionPayload}
           onChange={(e) => setForm({ ...form, sessionPayload: e.target.value })}
-          placeholder=".AspNetCore.Identity.Application=..."
+          placeholder=".AspNetCore.Face.CookieWithJwtAuth=..."
         />
         <small>{t("sessionHint")}</small>
       </label>
